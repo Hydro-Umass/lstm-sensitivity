@@ -7,9 +7,12 @@ from platypus import NSGAII, Problem, Real, ProcessPoolEvaluator
 
 from lstm import camels
 
-class VIC():
+
+class VIC:
+    """VIC hydrologic model wrapper."""
 
     def __init__(self, soilfile, gauge, startdate, enddate, datadir="data"):
+        """Initialize VIC model for a specific basin."""
         self.bid = gauge.gauge_id
         self.startdate = pd.to_datetime(startdate)
         self.enddate = pd.to_datetime(enddate)
@@ -25,6 +28,7 @@ class VIC():
         self.datadir = datadir
 
     def write_soil(self, outfile, line):
+        """Write soil parameter file."""
         with open(outfile, 'w') as fout:
             fout.write(line)
 
@@ -70,6 +74,7 @@ class VIC():
                 fout.write("{0:f} {1:.2f} {2:.2f} 5.00\n".format(row['Prcp'], row['Tmax'], row['Tmin']))
 
     def params(self, x):
+        """Apply calibration parameters to soil file line."""
         data = self.soil.split()
         data[4] = "{0:.4f}".format(x[0]) # b
         data[5] = "{0:.4f}".format(x[1]) # Ds
@@ -84,7 +89,7 @@ class VIC():
         return " ".join(data) + "\n"
 
     def run(self, params=[]):
-        """Run the VIC model and return the output."""
+        """Run VIC model and return streamflow in m/day."""
         with tempfile.TemporaryDirectory(dir="./", delete=True) as outdir:
             if len(params) > 0:
                 soil = self.params(params)
@@ -103,6 +108,7 @@ class VIC():
         return (out.runoff + out.baseflow) / 1000
 
 def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data"):
+    """Run VIC for multiple basins and return simulated vs observed streamflow."""
     basins = pd.read_csv(f"{datadir}/camels_topo.txt", sep=';', dtype={'gauge_id': str})
     mod = {}
     obs = {}
@@ -118,12 +124,14 @@ def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data"):
     return pd.DataFrame(mod), pd.DataFrame(obs)
 
 class VICObjective:
+    """Objective function for VIC calibration (minimizes negative NSE)."""
 
     def __init__(self, model, obs):
         self.model = model
         self.obs = obs
 
     def __call__(self, vars):
+        """Evaluate NSE for given parameter set."""
         q = self.model.run(vars)
         nse = 1 - np.sum((self.obs - q)**2) / np.sum((self.obs - np.mean(self.obs))**2)
         return [-nse]  # Minimize negative NSE
