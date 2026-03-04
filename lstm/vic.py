@@ -2,6 +2,7 @@ import pandas as pd
 import numpy as np
 import subprocess
 import tempfile
+from pathlib import Path
 from platypus import NSGAII, Problem, Real, ProcessPoolEvaluator
 
 from lstm import camels
@@ -62,7 +63,8 @@ class VIC():
         """Write forcing file from CAMELS data."""
         metfile = f"{self.datadir}/{forcing}/{self.bid}_lump_forcing_leap.txt"
         met = camels.read_met(metfile).loc[self.startdate:self.enddate, :]
-        outdir = f"{self.datadir}/forcings"
+        outdir = Path(f"{self.datadir}/forcings")
+        outdir.mkdir(exist_ok=True)
         with open(f"{outdir}/data_{self.lat:.5f}_{self.lon:.5f}", 'w') as fout:
             for i, row in met.iterrows():
                 fout.write("{0:f} {1:.2f} {2:.2f} 5.00\n".format(row['Prcp'], row['Tmax'], row['Tmin']))
