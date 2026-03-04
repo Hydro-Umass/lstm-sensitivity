@@ -5,7 +5,7 @@ import h5py
 from lstm import config, vic
 
 def main():
-    args = config.parse_args()
+    args = config.parse_args_vic()
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     with h5py.File(f"{args.data_dir}/{args.forcing}.h5") as f:
