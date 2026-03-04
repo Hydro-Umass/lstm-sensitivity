@@ -18,7 +18,7 @@ STATIC_VARS = [
     "clay_frac",
 ]
 
-def parse_args():
+def parse_args_lstm():
     parser = argparse.ArgumentParser(
         description="Train an Entity-Aware LSTM (EA-LSTM) on CAMELS data.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
@@ -87,6 +87,41 @@ def parse_args():
         type=str,
         default="outputs",
         help="Directory where the trained model and config will be saved.",
+    )
+
+    return parser.parse_args()
+
+
+def parse_args_vic():
+    parser = argparse.ArgumentParser(
+        description="Calibrate VIC hydrologic model on CAMELS data.",
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+
+    parser.add_argument(
+        "forcing",
+        type=str,
+        choices=FORCINGS,
+        help="Meteorological forcing dataset to use for calibration.",
+    )
+
+    parser.add_argument(
+        "--data-dir",
+        type=str,
+        default="data",
+        help="Directory containing the CAMELS data files.",
+    )
+    parser.add_argument(
+        "--seed",
+        type=int,
+        default=5678,
+        help="Random seed for reproducibility.",
+    )
+    parser.add_argument(
+        "--output-dir",
+        type=str,
+        default="outputs",
+        help="Directory where calibration results will be saved.",
     )
 
     return parser.parse_args()

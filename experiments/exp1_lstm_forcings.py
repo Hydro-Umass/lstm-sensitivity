@@ -6,7 +6,7 @@ from lstm import config
 from lstm.evals import evaluate
 
 def main():
-    args = config.parse_args()
+    args = config.parse_args_lstm()
 
     h5path = Path(args.data_dir) / f"{args.forcing}.h5"
     if not h5path.exists():
