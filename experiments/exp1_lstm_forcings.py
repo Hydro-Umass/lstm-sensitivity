@@ -43,10 +43,10 @@ def main():
     config.save(run_config, config_path)
     print(f"Config saved to : {config_path}")
 
-    mod, obs = evaluate(model, args.forcing, datadir="data")
+    mod, obs = evaluate(model, args.forcing, datadir=args.data_dir)
     mod.to_csv(f"{output_dir}/ealstm_{args.forcing}_train_predictions.csv")
     obs.to_csv(f"{output_dir}/ealstm_{args.forcing}_train_observations.csv")
-    mod, obs = evaluate(model, args.forcing, val_tstart, val_tend, datadir="data")
+    mod, obs = evaluate(model, args.forcing, val_tstart, val_tend, datadir=args.data_dir)
     mod.to_csv(f"{output_dir}/ealstm_{args.forcing}_valid_predictions.csv")
     obs.to_csv(f"{output_dir}/ealstm_{args.forcing}_valid_observations.csv")
 
