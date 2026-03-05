@@ -136,8 +136,15 @@ class VICObjective:
         nse = 1 - np.sum((self.obs - q)**2) / np.sum((self.obs - np.mean(self.obs))**2)
         return [-nse]  # Minimize negative NSE
 
-def calibrate(bid, soilfile, forcing, startdate, enddate, datadir="data", nprocs=32):
+def calibrate(bid, soilfile, forcing, startdate, enddate, datadir="data", nprocs=None):
     """Calibrate VIC model using NSGA-II optimization."""
+    if nprocs is None:
+        slurm_cpus = os.environ.get("SLURM_CPUS_PER_TASK")
+        if slurm_cpus is not None:
+            nprocs = int(slurm_cpus)
+        else:
+            nprocs = os.cpu_count() 
+
     basins = pd.read_csv(f"{datadir}/camels_topo.txt", sep=';', dtype={'gauge_id': str})
     gauge = basins.query("gauge_id == @bid").T.iloc[:, 0]
     model = VIC(soilfile, gauge, startdate, enddate, datadir)
