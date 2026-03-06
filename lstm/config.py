@@ -106,6 +106,13 @@ def parse_args_vic():
     )
 
     parser.add_argument(
+        "--vic-exec",
+        type=str,
+        default="vicNl",
+        help="Path to the VIC executable. ",
+    )
+    
+    parser.add_argument(
         "--data-dir",
         type=str,
         default="data",

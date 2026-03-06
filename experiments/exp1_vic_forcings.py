@@ -16,7 +16,7 @@ def main():
     outfile = f"{output_dir}/vic_{args.forcing}_baseline_soil.txt"
     with open(outfile, "w") as fout:
         for bid in tqdm(bids):
-            line = vic.calibrate(bid, soilfile, args.forcing, startdate, enddate, datadir=args.data_dir)
+            line = vic.calibrate(bid, soilfile, args.forcing, startdate, enddate, datadir=args.data_dir, vic_exec=args.vic_exec)
             fout.write(line)
     mod, obs = vic.evaluate(bids, outfile, args.forcing, startdate, enddate, args.data_dir)
     mod.to_csv(f"{output_dir}/vic_{args.forcing}_train_predictions.csv")

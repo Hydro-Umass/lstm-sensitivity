@@ -11,7 +11,7 @@ from lstm import camels
 class VIC:
     """VIC hydrologic model wrapper."""
 
-    def __init__(self, soilfile, gauge, startdate, enddate, datadir="data"):
+    def __init__(self, soilfile, gauge, startdate, enddate, datadir="data", vic_exec="vicNl"):
         """Initialize VIC model for a specific basin."""
         self.bid = gauge.gauge_id
         self.startdate = pd.to_datetime(startdate)
@@ -26,6 +26,7 @@ class VIC:
         self.lon = float(lons[i])
         self.area = float(gauge.area_gages2)
         self.datadir = datadir
+        self.vic_exec = vic_exec
 
     def write_soil(self, outfile, line):
         """Write soil parameter file."""
@@ -97,7 +98,7 @@ class VIC:
                 soil = self.soil
             self.write_soil("{0}/soil.txt".format(outdir), soil)
             self.write_global(outdir)
-            _ = subprocess.run(["vicNl", "-g", "{0}/global.txt".format(outdir)], capture_output=True, text=True)
+            _ = subprocess.run([self.vic_exe, "-g", "{0}/global.txt".format(outdir)], capture_output=True, text=True) 
             try:
                 out = pd.read_csv("{0}/flux_snow_{1:.5f}_{2:.5f}".format(outdir, self.lat, self.lon), sep='\\s+',
                                   header=None, names=['year', 'month', 'day', 'prec', 'evap', 'runoff', 'baseflow', 'sm1', 'sm2', 'sm3', 'swe', 'sensible', 'latent'])
@@ -136,11 +137,18 @@ class VICObjective:
         nse = 1 - np.sum((self.obs - q)**2) / np.sum((self.obs - np.mean(self.obs))**2)
         return [-nse]  # Minimize negative NSE
 
-def calibrate(bid, soilfile, forcing, startdate, enddate, datadir="data", nprocs=32):
+def calibrate(bid, soilfile, forcing, startdate, enddate, datadir="data", nprocs=None, vic_exec="vicNl"):
     """Calibrate VIC model using NSGA-II optimization."""
+    if nprocs is None:
+        slurm_cpus = os.environ.get("SLURM_CPUS_PER_TASK")
+        if slurm_cpus is not None:
+            nprocs = int(slurm_cpus)
+        else:
+            nprocs = os.cpu_count() 
+
     basins = pd.read_csv(f"{datadir}/camels_topo.txt", sep=';', dtype={'gauge_id': str})
     gauge = basins.query("gauge_id == @bid").T.iloc[:, 0]
-    model = VIC(soilfile, gauge, startdate, enddate, datadir)
+    model = VIC(soilfile, gauge, startdate, enddate, datadir, vic_exec=vic_exec)
     model.forcings(forcing)
     qfile = f"{datadir}/usgs/{model.bid}_streamflow_qc.txt"
     obs = camels.read_q(qfile).loc[model.startdate:model.enddate, 'Flow'] * 0.0283168 * 86400 / (model.area * 1e6)
