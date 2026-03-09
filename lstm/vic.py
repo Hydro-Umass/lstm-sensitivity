@@ -1,3 +1,4 @@
+import os
 import pandas as pd
 import numpy as np
 import subprocess
@@ -98,7 +99,7 @@ class VIC:
                 soil = self.soil
             self.write_soil("{0}/soil.txt".format(outdir), soil)
             self.write_global(outdir)
-            _ = subprocess.run([self.vic_exe, "-g", "{0}/global.txt".format(outdir)], capture_output=True, text=True) 
+            _ = subprocess.run([self.vic_exec, "-g", "{0}/global.txt".format(outdir)], capture_output=True, text=True) 
             try:
                 out = pd.read_csv("{0}/flux_snow_{1:.5f}_{2:.5f}".format(outdir, self.lat, self.lon), sep='\\s+',
                                   header=None, names=['year', 'month', 'day', 'prec', 'evap', 'runoff', 'baseflow', 'sm1', 'sm2', 'sm3', 'swe', 'sensible', 'latent'])
