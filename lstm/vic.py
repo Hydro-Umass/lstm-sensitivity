@@ -38,36 +38,76 @@ class VIC:
         with open(outfile, "w") as fout:
             fout.write(line)
 
-    def write_global(self, outdir):
+    def write_global(self, outdir, datadir=None):
         """Write global control file for VIC."""
-        with open(f"{self.datadir}/vic/global.template") as fin:
+        if datadir is None:
+            datadir = self.datadir
+
+        with open(f"{datadir}/vic/global.template") as fin:
             lines = fin.readlines()
-        with open("{0}/global.txt".format(outdir), "w") as fout:
+
+        with open(f"{outdir}/global.txt", "w") as fout:
             for line in lines:
-                if line.find("SOIL") == 0:
-                    fout.write(line.replace("soil.txt", "{0}/soil.txt".format(outdir)))
-                elif line.find("RESULT_DIR") == 0:
-                    fout.write(line.replace("./output", "{0}".format(outdir)))
-                elif line.find("STARTYEAR") == 0:
-                    fout.write(line.replace("1980", str(self.startdate.year)))
-                elif line.find("STARTMONTH") == 0:
-                    fout.write(line.replace("01", str(self.startdate.month)))
-                elif line.find("STARTDAY") == 0:
-                    fout.write(line.replace("01", str(self.startdate.day)))
-                elif line.find("ENDYEAR") == 0:
-                    fout.write(line.replace("2014", str(self.enddate.year)))
-                elif line.find("ENDMONTH") == 0:
-                    fout.write(line.replace("12", str(self.enddate.month)))
-                elif line.find("ENDDAY") == 0:
-                    fout.write(line.replace("31", str(self.enddate.day)))
-                elif line.find("FORCEYEAR") == 0:
-                    fout.write(line.replace("1985", str(self.startdate.year)))
-                elif line.find("FORCEMONTH") == 0:
-                    fout.write(line.replace("10", str(self.startdate.month)))
-                elif line.find("FORCEDAY") == 0:
-                    fout.write(line.replace("01", str(self.startdate.day)))
+                line = line.strip()
+
+                if not line:
+                    fout.write("\n")
+                    continue
+
+                parts = line.split(None, 1)
+                if len(parts) < 2:
+                    fout.write(line + "\n")
+                    continue
+
+                param_name, param_value = parts[0], parts[1]
+
+                if param_name == "FORCING1":
+                    fout.write(f"FORCING1        {datadir}/forcings/data_\n")
+                elif param_name == "SOIL":
+                    fout.write(f"SOIL            {outdir}/soil.txt\n")
+                elif param_name == "RESULT_DIR":
+                    fout.write(f"RESULT_DIR      {outdir}\n")
+                elif param_name == "STARTYEAR":
+                    fout.write(f"STARTYEAR\t{self.startdate.year}\t# year model simulation starts\n")
+                elif param_name == "STARTMONTH":
+                    fout.write(f"STARTMONTH\t{self.startdate.month:02d}\t# month model simulation starts\n")
+                elif param_name == "STARTDAY":
+                    fout.write(f"STARTDAY\t{self.startdate.day:02d}\t# day model simulation starts\n")
+                elif param_name == "ENDYEAR":
+                    fout.write(f"ENDYEAR\t{self.enddate.year}\t# year model simulation ends\n")
+                elif param_name == "ENDMONTH":
+                    fout.write(f"ENDMONTH\t{self.enddate.month:02d}\t# month model simulation ends\n")
+                elif param_name == "ENDDAY":
+                    fout.write(f"ENDDAY\t{self.enddate.day:02d}\t# day model simulation ends\n")
+                elif param_name == "FORCEYEAR":
+                    fout.write(f"FORCEYEAR\t{self.startdate.year}\t# Year of first forcing record\n")
+                elif param_name == "FORCEMONTH":
+                    fout.write(f"FORCEMONTH\t{self.startdate.month:02d}\t# Month of first forcing record\n")
+                elif param_name == "FORCEDAY":
+                    fout.write(f"FORCEDAY\t{self.startdate.day:02d}\t# Day of first forcing record\n")
+                elif param_name == "VEGLIB":
+                    fout.write(f"VEGLIB          {datadir}/vic/LDAS_veg_lib\n")
+                elif param_name == "VEGPARAM":
+                    fout.write(f"VEGPARAM        {datadir}/vic/vic.nldas.mexico.veg.txt\n")
+                elif param_name == "SNOW_BAND":
+                    snow_parts = param_value.split()
+                    if len(snow_parts) > 1:
+                        snow_path = snow_parts[1]
+                        if snow_path.startswith("data/"):
+                            new_snow_path = f"{datadir}/vic/vic.nldas.mexico.snow.txt.L13"
+                            fout.write(f"SNOW_BAND       {snow_parts[0]} {new_snow_path}\n")
+                        else:
+                            fout.write(line + "\n")
+                    else:
+                        fout.write(line + "\n")
+                elif param_name in ("LAKES",):
+                    if param_value.startswith("data/"):
+                        fout.write(f"LAKES           {datadir}/vic/lake_param.txt\n")
+                    else:
+                        fout.write(line + "\n")
                 else:
-                    fout.write(line)
+                    # Keep other lines as-is
+                    fout.write(line + "\n")
 
     def forcings(self, forcing):
         """Write forcing file from CAMELS data."""
@@ -98,15 +138,18 @@ class VIC:
             data[33 + lyr] = "{0:.0f}".format(x[8])  # bulk density
         return " ".join(data) + "\n"
 
-    def run(self, params=[]):
+    def run(self, params=[], datadir=None):
         """Run VIC model and return streamflow in m/day."""
+        if datadir is None:
+            datadir = self.datadir
+
         with tempfile.TemporaryDirectory(dir="./", delete=True) as outdir:
             if len(params) > 0:
                 soil = self.params(params)
             else:
                 soil = self.soil
             self.write_soil("{0}/soil.txt".format(outdir), soil)
-            self.write_global(outdir)
+            self.write_global(outdir, datadir)
             _ = subprocess.run(
                 [self.vic_exec, "-g", "{0}/global.txt".format(outdir)],
                 capture_output=True,
@@ -152,7 +195,7 @@ def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data"):
     obs = {}
     for bid in bids:
         gauge = basins.query("gauge_id == @bid").T.iloc[:, 0]
-        model = VIC(soilfile, gauge, startdate, enddate)
+        model = VIC(soilfile, gauge, startdate, enddate, datadir=datadir)
         model.forcings(forcing)
         qfile = f"{datadir}/usgs/{model.bid}_streamflow_qc.txt"
         qobs = (
@@ -161,7 +204,7 @@ def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data"):
             * 86400
             / (model.area * 1e6)
         )
-        q = model.run()
+        q = model.run(datadir=datadir)
         mod[bid] = q
         obs[bid] = qobs
     return pd.DataFrame(mod), pd.DataFrame(obs)
@@ -223,7 +266,8 @@ def calibrate(
         Real(0.1, 10.0),  # Ksat
         Real(1350, 1650),  # bd
     ]
-    problem.function = VICObjective(model, obs)
+    # Wrap model.run to include datadir
+    problem.function = VICObjective(lambda params: model.run(params, datadir=datadir), obs)
 
     with ProcessPoolEvaluator(nprocs) as evaluator:
         algorithm = NSGAII(problem, evaluator=evaluator)
