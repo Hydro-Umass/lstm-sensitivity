@@ -38,10 +38,9 @@ class VIC:
         with open(outfile, "w") as fout:
             fout.write(line)
 
-    def write_global(self, outdir, datadir=None):
+    def write_global(self, outdir):
         """Write global control file for VIC."""
-        if datadir is None:
-            datadir = self.datadir
+        datadir = self.datadir
 
         with open(f"{datadir}/vic/global.template") as fin:
             lines = fin.readlines()
@@ -138,18 +137,15 @@ class VIC:
             data[33 + lyr] = "{0:.0f}".format(x[8])  # bulk density
         return " ".join(data) + "\n"
 
-    def run(self, params=[], datadir=None):
+    def run(self, params=[]):
         """Run VIC model and return streamflow in m/day."""
-        if datadir is None:
-            datadir = self.datadir
-
         with tempfile.TemporaryDirectory(dir="./", delete=True) as outdir:
             if len(params) > 0:
                 soil = self.params(params)
             else:
                 soil = self.soil
             self.write_soil("{0}/soil.txt".format(outdir), soil)
-            self.write_global(outdir, datadir)
+            self.write_global(outdir)
             _ = subprocess.run(
                 [self.vic_exec, "-g", "{0}/global.txt".format(outdir)],
                 capture_output=True,
@@ -204,7 +200,7 @@ def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data"):
             * 86400
             / (model.area * 1e6)
         )
-        q = model.run(datadir=datadir)
+        q = model.run()
         mod[bid] = q
         obs[bid] = qobs
     return pd.DataFrame(mod), pd.DataFrame(obs)
@@ -267,7 +263,7 @@ def calibrate(
         Real(1350, 1650),  # bd
     ]
     # Wrap model.run to include datadir
-    problem.function = VICObjective(lambda params: model.run(params, datadir=datadir), obs)
+    problem.function = VICObjective(model, obs)
 
     with ProcessPoolEvaluator(nprocs) as evaluator:
         algorithm = NSGAII(problem, evaluator=evaluator)

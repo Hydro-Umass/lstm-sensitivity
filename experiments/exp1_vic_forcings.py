@@ -18,11 +18,13 @@ def main():
         for bid in tqdm(bids):
             line = vic.calibrate(bid, soilfile, args.forcing, startdate, enddate, datadir=args.data_dir, vic_exec=args.vic_exec)
             fout.write(line)
+    print("Evaluating calibration period")
     mod, obs = vic.evaluate(bids, outfile, args.forcing, startdate, enddate, datadir=args.data_dir)
     mod.to_csv(f"{output_dir}/vic_{args.forcing}_train_predictions.csv")
     obs.to_csv(f"{output_dir}/vic_{args.forcing}_train_observations.csv")
     val_tstart = "2000-10-01"
     val_tend = "2008-09-30"
+    print("Evaluating validation period")
     mod, obs = vic.evaluate(bids, outfile, args.forcing, val_tstart, val_tend, datadir=args.data_dir)
     mod.to_csv(f"{output_dir}/vic_{args.forcing}_valid_predictions.csv")
     obs.to_csv(f"{output_dir}/vic_{args.forcing}_valid_observations.csv")
