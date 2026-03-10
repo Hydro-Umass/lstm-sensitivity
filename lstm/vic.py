@@ -3,6 +3,7 @@ import pandas as pd
 import numpy as np
 import subprocess
 import tempfile
+import shutil
 from pathlib import Path
 from platypus import NSGAII, Problem, Real, ProcessPoolEvaluator
 
@@ -32,6 +33,7 @@ class VIC:
         self.area = float(gauge.area_gages2)
         self.datadir = datadir
         self.vic_exec = vic_exec
+        self.forcingpath = f"{datadir}/forcings"
 
     def write_soil(self, outfile, line):
         """Write soil parameter file."""
@@ -61,7 +63,7 @@ class VIC:
                 param_name, param_value = parts[0], parts[1]
 
                 if param_name == "FORCING1":
-                    fout.write(f"FORCING1        {datadir}/forcings/data_\n")
+                    fout.write(f"FORCING1        {self.forcingpath}/data_\n")
                 elif param_name == "SOIL":
                     fout.write(f"SOIL            {outdir}/soil.txt\n")
                 elif param_name == "RESULT_DIR":
@@ -112,15 +114,15 @@ class VIC:
         """Write forcing file from CAMELS data."""
         metfile = f"{self.datadir}/{forcing}/{self.bid}_lump_forcing_leap.txt"
         met = camels.read_met(metfile).loc[self.startdate : self.enddate, :]
-        outdir = Path(f"{self.datadir}/forcings")
-        outdir.mkdir(exist_ok=True)
-        with open(f"{outdir}/data_{self.lat:.5f}_{self.lon:.5f}", "w") as fout:
-            for i, row in met.iterrows():
-                fout.write(
-                    "{0:f} {1:.2f} {2:.2f} 5.00\n".format(
-                        row["Prcp"], row["Tmax"], row["Tmin"]
+        with tempfile.TemporaryDirectory(dir=f"{self.datadir}/forcings", delete=False) as outdir:
+            self.forcingpath = outdir
+            with open(f"{outdir}/data_{self.lat:.5f}_{self.lon:.5f}", "w") as fout:
+                for i, row in met.iterrows():
+                    fout.write(
+                        "{0:f} {1:.2f} {2:.2f} 5.00\n".format(
+                            row["Prcp"], row["Tmax"], row["Tmin"]
+                        )
                     )
-                )
 
     def params(self, x):
         """Apply calibration parameters to soil file line."""
@@ -262,12 +264,15 @@ def calibrate(
         Real(0.1, 10.0),  # Ksat
         Real(1350, 1650),  # bd
     ]
-    # Wrap model.run to include datadir
+    # wrap model.run to include datadir
     problem.function = VICObjective(model, obs)
 
     with ProcessPoolEvaluator(nprocs) as evaluator:
         algorithm = NSGAII(problem, evaluator=evaluator)
         algorithm.run(1000)
+
+    # delete temporary forcing directory
+    shutil.rmtree(model.forcingpath)
 
     best = min(algorithm.result, key=lambda x: x.objectives[0])
     return model.params(best.variables)
