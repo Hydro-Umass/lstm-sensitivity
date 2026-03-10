@@ -1,0 +1,93 @@
+import jax.random as jrn
+from abc import ABC, abstractmethod
+
+class Perturbation(ABC):
+
+    @abstractmethod
+    def __call__(self, x, key=None):
+        pass
+
+    @property
+    @abstractmethod
+    def name(self):
+        pass
+
+    def get_config(self):
+        return {'type': self.name}
+
+class NoPerturbation(Perturbation):
+
+    def __call__(self, x, key=None):
+        return x, key
+
+    @property
+    def name(self):
+        return "none"
+
+class ZeroPrecipitation(Perturbation):
+
+    def __init__(self, dims=(0,)):
+        self.dims = dims
+
+    def __call__(self, x, key=None):
+        for dim in self.dims:
+            x = x.at[:, :, dim].set(0.0)
+        return x, key
+
+    @property
+    def name(self):
+        return "zero"
+
+    def get_config(self):
+        return {
+            "type": self.name,
+            "dims": self.dims
+        }
+
+class RandomPerturbation(Perturbation):
+
+    def __init__(self, stddev=0.1, dims=(0,)):
+        self.dims = dims
+        self.stddev = stddev
+
+    def __call__(self, x, key=None):
+        if key is None:
+            key = jrn.PRNGKey(0)
+        for dim in self.dims:
+            noise_key, key = jrn.split(key)
+            noise = jrn.normal(noise_key, x.shape[:, :, dim]) * self.stddev + 1.0
+            x = x.at[:, :, dim].multiply(noise)
+        return x, key
+
+    @property
+    def name(self):
+        return "random"
+
+    def get_config(self):
+        return {
+            "type": self.name,
+            "dims": self.dims,
+            "stddev": self.stddev,
+        }
+
+class BiasPerturbation(Perturbation):
+
+    def __init__(self, mbias=1.1, dims=(0,)):
+        self.dims = dims
+        self.bias = mbias
+
+    def __call__(self, x, key=None):
+        for dim in self.dims:
+            x = x.at[:, :, dim].multiply(self.bias)
+        return x, key
+
+    @property
+    def name(self) -> str:
+        return "bias"
+
+    def get_config(self) -> dict:
+        return {
+            "type": self.name,
+            "dims": self.dims,
+            "bias": self.bias,
+        }
