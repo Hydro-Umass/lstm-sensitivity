@@ -325,10 +325,12 @@ def dataloader(h5path: str, batch_size:int, key: jrn.PRNGKey, shuffle: bool=True
     if preload:
         print("Loading dataset into memory...")
         with h5py.File(h5path, "r") as f:
-            x_all  = f["x_n"][:]
+            x_all  = f["x"][:]
             xs_all = f["xs"][:]
             y_all  = f["y"][:]
             s_all  = f["s"][:]
+            xmean  = f.attrs["xmean"]
+            xstd   = f.attrs["xstd"]
         print("Dataset loaded.")
         n_samples = x_all.shape[0]
         while True:
@@ -346,6 +348,7 @@ def dataloader(h5path: str, batch_size:int, key: jrn.PRNGKey, shuffle: bool=True
                         x_batch, pert_key = perturbation(x_batch, pert_key)
                     else:
                         x_batch, _ = perturbation(x_batch)
+                x_batch = (x_batch - xmean) / xstd
                 yield (
                     x_batch,
                     jnp.asarray(xs_all[batch_idx]),
@@ -355,6 +358,8 @@ def dataloader(h5path: str, batch_size:int, key: jrn.PRNGKey, shuffle: bool=True
     else:
         with h5py.File(h5path, "r") as f:
             n_samples = f["x"].shape[0]
+            xmean = f.attrs["xmean"]
+            xstd  = f.attrs["xstd"]
             while True:
                 indices = np.arange(n_samples)
                 if shuffle:
@@ -366,7 +371,7 @@ def dataloader(h5path: str, batch_size:int, key: jrn.PRNGKey, shuffle: bool=True
                     batch_idx = indices[start : start + batch_size]
                     sorted_pos = np.argsort(batch_idx)
                     sorted_idx = batch_idx[sorted_pos]
-                    x_np  = f["x_n"][sorted_idx]
+                    x_np  = f["x"][sorted_idx]
                     xs_np = f["xs"][sorted_idx]
                     y_np  = f["y"][sorted_idx]
                     s_np  = f["s"][sorted_idx]
@@ -377,6 +382,7 @@ def dataloader(h5path: str, batch_size:int, key: jrn.PRNGKey, shuffle: bool=True
                             x_batch, pert_key = perturbation(x_batch, pert_key)
                         else:
                             x_batch, _ = perturbation(x_batch)
+                    x_batch = (x_batch - xmean) / xstd
                     yield (
                         x_batch,
                         jnp.asarray(xs_np[inv]),
