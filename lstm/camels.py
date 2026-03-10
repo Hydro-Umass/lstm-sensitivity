@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import h5py
+from typing import Optional
 
 import jax.random as jrn
 import jax.numpy as jnp
@@ -294,7 +295,7 @@ def generate_h5file(forcing, tstart, tend, seq_len, acols, datadir):
         ds_bid = f.create_dataset("bids", shape=(len(bids), ), dtype=h5py.string_dtype())
         ds_bid[:] = np.array(bids)
 
-def dataloader(h5path, batch_size, key, shuffle=True, preload=False):
+def dataloader(h5path: str, batch_size:int, key: jrn.PRNGKey, shuffle: bool=True, preload: bool=False, perturbation: Optional['Perturbation']=None, pert_key: Optional[jrn.PRNGKey]=None):
     """
     Creates a data loader for HDF5 dataset.
 
@@ -311,6 +312,10 @@ def dataloader(h5path, batch_size, key, shuffle=True, preload=False):
     preload : bool, optional
         Whether to load the entire dataset into RAM at startup (default: False).
         Significantly faster if enough RAM is available (recommended if >64GB RAM).
+    perturbation : Perturbation, optional
+        Perturbation object to apply to inputs (default: None)
+    pert_key : jax.random.PRNGKey, optional
+        Random key for reproducible perturbations
 
     Yields:
     -------
@@ -335,8 +340,14 @@ def dataloader(h5path, batch_size, key, shuffle=True, preload=False):
                 rng.shuffle(indices)
             for start in range(0, n_samples - batch_size + 1, batch_size):
                 batch_idx = indices[start : start + batch_size]
+                x_batch = jnp.asarray(x_all[batch_idx])
+                if perturbation is not None:
+                    if pert_key is not None:
+                        x_batch, pert_key = perturbation(x_batch, pert_key)
+                    else:
+                        x_batch, _ = perturbation(x_batch)
                 yield (
-                    jnp.asarray(x_all[batch_idx]),
+                    x_batch,
                     jnp.asarray(xs_all[batch_idx]),
                     jnp.asarray(y_all[batch_idx]),
                     jnp.asarray(s_all[batch_idx]),
@@ -360,8 +371,14 @@ def dataloader(h5path, batch_size, key, shuffle=True, preload=False):
                     y_np  = f["y"][sorted_idx]
                     s_np  = f["s"][sorted_idx]
                     inv = np.argsort(sorted_pos)
+                    x_batch = jnp.asarray(x_np[inv])
+                    if perturbation is not None:
+                        if pert_key is not None:
+                            x_batch, pert_key = perturbation(x_batch, pert_key)
+                        else:
+                            x_batch, _ = perturbation(x_batch)
                     yield (
-                        jnp.asarray(x_np[inv]),
+                        x_batch,
                         jnp.asarray(xs_np[inv]),
                         jnp.asarray(y_np[inv]),
                         jnp.asarray(s_np[inv]),
