@@ -5,6 +5,7 @@ import equinox as eqx
 import jax
 import jax.random as jrn
 import jax.numpy as jnp
+from tqdm import tqdm
 
 from lstm import camels, config
 
@@ -52,7 +53,7 @@ def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data", 
     dt = pd.date_range(tstart, tend)
     mod = {}
     obs = {}
-    for bi, bid in enumerate(bids):
+    for bi, bid in enumerate(tqdm(bids, desc="Evaluating")):
         xt_ = np.stack([xt[bi][t:t+seq_len, :] for t in range(xt[bi].shape[0]-seq_len)])
         xst_ = np.stack([xst[bi] for _ in range(xt[bi].shape[0]-seq_len)])
         xt_ = jnp.asarray(xt_)
