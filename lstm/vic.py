@@ -184,14 +184,14 @@ class VIC:
         return (out.runoff + out.baseflow) / 1000
 
 
-def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data"):
+def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data", vic_exec="vicNl"):
     """Run VIC for multiple basins and return simulated vs observed streamflow."""
     basins = pd.read_csv(f"{datadir}/camels_topo.txt", sep=";", dtype={"gauge_id": str})
     mod = {}
     obs = {}
     for bid in bids:
         gauge = basins.query("gauge_id == @bid").T.iloc[:, 0]
-        model = VIC(soilfile, gauge, startdate, enddate, datadir=datadir)
+        model = VIC(soilfile, gauge, startdate, enddate, datadir=datadir, vic_exec=vic_exec)
         model.forcings(forcing)
         qfile = f"{datadir}/usgs/{model.bid}_streamflow_qc.txt"
         qobs = (
