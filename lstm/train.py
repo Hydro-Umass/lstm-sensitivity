@@ -19,9 +19,10 @@ def train_ealstm(
     epochs=30,
     clip_gradient_norm=1.0,
     preload=False,
+    perturbation=None
 ):
     eps = 1e-6
-    data_key, model_key, dropout_key = jrn.split(jrn.PRNGKey(seed), 3)
+    data_key, model_key, dropout_key, pert_key = jrn.split(jrn.PRNGKey(seed), 4)
     with h5py.File(h5path, "r") as f:
         dataset_size = f["x"].shape[0]
         nvars = f["x"].shape[2]
@@ -44,7 +45,7 @@ def train_ealstm(
     )
     opt_state = optim.init(eqx.filter(model, eqx.is_inexact_array))
     # define training data loader
-    train_loader = camels.dataloader(h5path, batch_size, data_key, shuffle=True, preload=preload)
+    train_loader = camels.dataloader(h5path, batch_size, data_key, shuffle=True, preload=preload, perturbation=perturbation, pert_key=pert_key if perturbation is not None else None)
 
     @eqx.filter_value_and_grad
     def compute_loss(model, x, xs, y, s, key):
