@@ -55,7 +55,9 @@ class RandomPerturbation(Perturbation):
             key = jrn.PRNGKey(0)
         for dim in self.dims:
             noise_key, key = jrn.split(key)
-            noise = jrn.normal(noise_key, x.shape[:, :, dim]) * self.stddev + 1.0
+            # x.shape is (batch, seq_len, n_features); we perturb the feature dim
+            noise_shape = (x.shape[0], x.shape[1])
+            noise = jrn.normal(noise_key, noise_shape) * self.stddev + 1.0
             x = x.at[:, :, dim].multiply(noise)
         return x, key
 
