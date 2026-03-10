@@ -8,7 +8,7 @@ import jax.numpy as jnp
 
 from lstm import camels, config
 
-def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data"):
+def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data", perturbation=None):
     """
     Evaluates the model on specified basins.
     It handles data normalization using mean and standard deviation stored in the HDF5 file.
@@ -27,6 +27,8 @@ def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data"):
        List of basin IDs to evaluate on.
     datadir : str, optional
         Directory path containing data files (default: "data")
+    perturbation : Perturbation, optional
+        Perturbation to apply to raw inputs before normalisation (default: None).
 
     Returns:
     --------
@@ -53,6 +55,9 @@ def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data"):
     for bi, bid in enumerate(bids):
         xt_ = np.stack([xt[bi][t:t+seq_len, :] for t in range(xt[bi].shape[0]-seq_len)])
         xst_ = np.stack([xst[bi] for _ in range(xt[bi].shape[0]-seq_len)])
+        xt_ = jnp.asarray(xt_)
+        if perturbation is not None:
+            xt_, _ = perturbation(xt_)
         xt_ = (xt_ - xmean) / xstd
         inf_model = eqx.nn.inference_mode(model)
         pred = jax.vmap(inf_model)(xt_, xst_, key=jrn.split(jrn.PRNGKey(0), xt_.shape[0]))
