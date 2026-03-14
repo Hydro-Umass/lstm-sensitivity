@@ -54,8 +54,8 @@ def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data", 
     mod = {}
     obs = {}
     for bi, bid in enumerate(tqdm(bids, desc="Evaluating")):
-        xt_ = np.stack([xt[bi][t:t+seq_len, :] for t in range(xt[bi].shape[0]-seq_len)])
-        xst_ = np.stack([xst[bi] for _ in range(xt[bi].shape[0]-seq_len)])
+        xt_ = np.stack([xt[bi][t:t+seq_len, :] for t in range(xt[bi].shape[0]-seq_len+1)])
+        xst_ = np.stack([xst[bi] for _ in range(xt[bi].shape[0]-seq_len+1)])
         xt_ = jnp.asarray(xt_)
         if perturbation is not None:
             xt_, _ = perturbation(xt_)

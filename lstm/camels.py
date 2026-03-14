@@ -172,11 +172,11 @@ def get_data(bids, forcing, tstart, tend, seq_len, attribs, datadir="data"):
         ).dropna()
         sdata = (attribs.loc[bid, :] - attribs.mean()) / attribs.std()
         tr = data.loc[
-            tstart - pd.DateOffset(days=seq_len) : tend,
+            tstart - pd.DateOffset(days=seq_len-1) : tend,
             ["Prcp", "Tmax", "Tmin", "Srad", "Vp"],
         ]
         # REVIEW: if intermittent basins cause issues we can comment this back in
-        if len(tr) == ndays + seq_len:  # and (q['Flow'] > 0).all():
+        if len(tr) == ndays + seq_len - 1:  # and (q['Flow'] > 0).all():
             xt_ = tr.values.astype(np.float32)
             xst_ = sdata.values.astype(np.float32)
             yt_ = data.loc[tstart:tend, "Flow"].values.reshape(-1, 1)
@@ -266,20 +266,6 @@ def write_data(xt, xst, yt, sb, seq_len, h5path, chunksize=512):
         xmean = xsum / xcount
         xstd = np.sqrt(xsum2 / xcount - xmean**2)
         xstd = np.maximum(xstd, 1e-8)  # avoid division with zero
-        ds_xn = f.create_dataset(
-            "x_n",
-            shape=(n_samples, seq_len, n_dynamic),
-            dtype="float32",
-            chunks=(chunk_rows, seq_len, n_dynamic),
-        )
-        cursor = 0
-        for b, (x_b, y_b) in enumerate(zip(xt, yt)):
-            n = len(y_b)
-            x_seq = (
-                np.stack([x_b[t : t + seq_len] for t in range(n)], axis=0) - xmean
-            ) / xstd
-            ds_xn[cursor : cursor + n] = x_seq
-            cursor += n
         f.attrs["xmean"] = xmean.astype(np.float32)
         f.attrs["xstd"] = xstd.astype(np.float32)
         f.attrs["seq_len"] = seq_len
@@ -294,6 +280,8 @@ def generate_h5file(forcing, tstart, tend, seq_len, acols, datadir):
     with h5py.File(h5path, "a") as f:
         ds_bid = f.create_dataset("bids", shape=(len(bids), ), dtype=h5py.string_dtype())
         ds_bid[:] = np.array(bids)
+        f.attrs["tstart"] = tstart
+        f.attrs["tend"] = tend
 
 def dataloader(h5path: str, batch_size:int, key: jrn.PRNGKey, shuffle: bool=True, preload: bool=False, perturbation: Optional['Perturbation']=None, pert_key: Optional[jrn.PRNGKey]=None):
     """
