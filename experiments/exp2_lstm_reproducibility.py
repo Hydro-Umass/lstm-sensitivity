@@ -9,31 +9,23 @@ from lstm import config
 from lstm.evals import evaluate
 
 
-def load_or_train(model_path, h5path, args):
-    if model_path.exists():
-        print(f"Found existing model at {model_path}, loading...")
+def load_model(model_path, h5path, args):
+    if not model_path.exists():
+        raise FileNotFoundError(
+            f"Model file not found: {model_path}. "
+            f"Train the baseline model with {train_forcing}."
+        )
+    else:
         with h5py.File(str(h5path), "r") as f:
             nvars = f["x"].shape[2]
             nsvars = f["xs"].shape[1]
+            train_xmean = f.attrs["xmean"]
+            train_xstd = f.attrs["xstd"]
         model_key = jrn.split(jrn.PRNGKey(args.seed), 4)[1]
         skeleton = EALSTM(nvars, nsvars, args.hidden_size, 1, args.dropout_rate, key=model_key)
         model = eqx.tree_deserialise_leaves(str(model_path), skeleton)
         print(f"Model loaded from : {model_path}")
-    else:
-        print(f"No model found at {model_path}, training from scratch...")
-        model = train_ealstm(
-            h5path=str(h5path),
-            hidden_size=args.hidden_size,
-            dropout_rate=args.dropout_rate,
-            batch_size=args.batch_size,
-            seed=args.seed,
-            epochs=args.epochs,
-            clip_gradient_norm=args.clip_gradient_norm,
-            preload=args.preload,
-        )
-        eqx.tree_serialise_leaves(str(model_path), model)
-        print(f"Model saved to: {model_path}")
-    return model
+    return model, train_xmean, train_xstd
 
 
 def main():
@@ -53,7 +45,7 @@ def main():
     model_path = output_dir / f"ealstm_{train_forcing}.eqx"
     config_path = output_dir / f"ealstm_{train_forcing}.toml"
 
-    model = load_or_train(model_path, h5path, args)
+    model = load_model(model_path, h5path, args)
 
     val_tstart = "2000-10-01"
     val_tend = "2008-09-30"
@@ -77,12 +69,12 @@ def main():
             continue
 
         print(f"\nEvaluating with '{eval_forcing}' forcings (training period)...")
-        mod, obs = evaluate(model, eval_forcing, datadir=args.data_dir)
+        mod, obs = evaluate(model, eval_forcing, datadir=args.data_dir, xmean=train_xmean, xstd=train_xstd)
         mod.to_csv(f"{output_dir}/ealstm_train{train_forcing}_eval{eval_forcing}_train_predictions.csv")
         obs.to_csv(f"{output_dir}/ealstm_train{train_forcing}_eval{eval_forcing}_train_observations.csv")
 
         print(f"Evaluating with '{eval_forcing}' forcings (validation period)...")
-        mod, obs = evaluate(model, eval_forcing, val_tstart, val_tend, datadir=args.data_dir)
+        mod, obs = evaluate(model, eval_forcing, val_tstart, val_tend, datadir=args.data_dir, xmean=train_xmean, xstd=train_xstd)
         mod.to_csv(f"{output_dir}/ealstm_train{train_forcing}_eval{eval_forcing}_valid_predictions.csv")
         obs.to_csv(f"{output_dir}/ealstm_train{train_forcing}_eval{eval_forcing}_valid_observations.csv")
 
