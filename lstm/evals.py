@@ -9,7 +9,7 @@ from tqdm import tqdm
 
 from lstm import camels, config
 
-def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data", perturbation=None):
+def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data", perturbation=None, xmean=None, xstd=None):
     """
     Evaluates the model on specified basins.
     It handles data normalization using mean and standard deviation stored in the HDF5 file.
@@ -30,6 +30,10 @@ def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data", 
         Directory path containing data files (default: "data")
     perturbation : Perturbation, optional
         Perturbation to apply to raw inputs before normalisation (default: None).
+    xmean : array-like, optional
+        Mean of training data for normalization. If None, reads from HDF5 file.
+    xstd : array-like, optional
+        Standard deviation of training data for normalization. If None, reads from HDF5 file.
 
     Returns:
     --------
@@ -40,8 +44,10 @@ def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data", 
     """
     h5path = f"{datadir}/{forcing}.h5"
     with h5py.File(h5path) as f:
-        xmean = f.attrs["xmean"]
-        xstd = f.attrs["xstd"]
+        if xmean is None:
+            xmean = f.attrs["xmean"]
+        if xstd is None:
+            xstd = f.attrs["xstd"]
         seq_len = f.attrs["seq_len"]
         if bids is None:
             bids = [b.decode() for b in f["bids"][:]]
