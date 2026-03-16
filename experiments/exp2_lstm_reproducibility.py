@@ -39,6 +39,9 @@ def main():
             f"HDF5 file not found: {h5path}. "
             f"Expected a file named '{train_forcing}.h5' in '{args.data_dir}'."
         )
+    with h5py.File as f:
+        train_xmean = f.attrs["xmean"]
+        train_xstd = f.attrs["xstd"]
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
