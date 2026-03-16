@@ -39,16 +39,13 @@ def main():
             f"HDF5 file not found: {h5path}. "
             f"Expected a file named '{train_forcing}.h5' in '{args.data_dir}'."
         )
-    with h5py.File as f:
-        train_xmean = f.attrs["xmean"]
-        train_xstd = f.attrs["xstd"]
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     model_path = output_dir / f"ealstm_{train_forcing}.eqx"
     config_path = output_dir / f"ealstm_{train_forcing}.toml"
 
-    model = load_model(model_path, h5path, args)
+    model, train_xmean, train_xstd = load_model(model_path, h5path, args)
 
     val_tstart = "2000-10-01"
     val_tend = "2008-09-30"
