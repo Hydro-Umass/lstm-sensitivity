@@ -45,7 +45,7 @@ def main():
     model_path = output_dir / f"ealstm_{train_forcing}.eqx"
     config_path = output_dir / f"ealstm_{train_forcing}.toml"
 
-    model = load_model(model_path, h5path, args)
+    model, train_xmean, train_xstd = load_model(model_path, h5path, args)
 
     val_tstart = "2000-10-01"
     val_tend = "2008-09-30"
