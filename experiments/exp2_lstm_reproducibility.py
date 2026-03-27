@@ -59,7 +59,7 @@ def main():
     else:
         print(f"Config already exists at {config_path}, skipping save.")
 
-    eval_forcings = [f for f in config.FORCINGS if f != train_forcing]
+    eval_forcings = [train_forcing]
     print(f"\nModel trained on {train_forcing} will be evaluated on: {eval_forcings}")
 
     for eval_forcing in eval_forcings:
