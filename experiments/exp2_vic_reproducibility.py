@@ -25,12 +25,12 @@ def main():
         eval_soilfile = f"{output_dir}/vic_{train_forcing}_baseline_soil.txt"
 
         print(f"\nEvaluating with '{eval_forcing}' forcings (training period)...")
-        mod, obs = vic.evaluate(bids, outfile, eval_forcing, tstart, tend, datadir=args.data_dir, vic_exec=args.vic_exec)
+        mod, obs = vic.evaluate(bids, eval_soilfile, eval_forcing, tstart, tend, datadir=args.data_dir, vic_exec=args.vic_exec)
         mod.to_csv(f"{output_dir}/vic_train{train_forcing}_eval{eval_forcing}_train_predictions.csv")
         obs.to_csv(f"{output_dir}/vic_train{train_forcing}_eval{eval_forcing}_train_observations.csv")
 
         print(f"Evaluating with '{eval_forcing}' forcings (validation period)...")
-        mod, obs = vic.evaluate(bids, outfile, eval_forcing, val_tstart, val_tend, datadir=args.data_dir, vic_exec=args.vic_exec)
+        mod, obs = vic.evaluate(bids, eval_soilfile, eval_forcing, val_tstart, val_tend, datadir=args.data_dir, vic_exec=args.vic_exec)
         mod.to_csv(f"{output_dir}/vic_train{train_forcing}_eval{eval_forcing}_valid_predictions.csv")
         obs.to_csv(f"{output_dir}/vic_train{train_forcing}_eval{eval_forcing}_valid_observations.csv")
 
