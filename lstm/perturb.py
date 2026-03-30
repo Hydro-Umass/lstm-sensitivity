@@ -89,6 +89,7 @@ class RandomPerturbation(Perturbation):
         xstd = xstd.copy()
         for dim in self.dims:
             xstd[dim] = xstd[dim] * jnp.sqrt(1 + self.stddev**2)
+        return xmean, xstd 
 
 class BiasPerturbation(Perturbation):
 
