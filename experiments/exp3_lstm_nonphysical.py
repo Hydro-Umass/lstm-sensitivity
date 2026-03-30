@@ -1,3 +1,4 @@
+import h5py
 import equinox as eqx
 from pathlib import Path
 
