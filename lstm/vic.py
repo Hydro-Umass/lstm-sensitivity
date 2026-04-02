@@ -110,7 +110,7 @@ class VIC:
                     # Keep other lines as-is
                     fout.write(line + "\n")
 
-    def forcings(self, forcing):
+    def forcings(self, forcing, zero_precip=False):
         """Write forcing file from CAMELS data."""
         metfile = f"{self.datadir}/{forcing}/{self.bid}_lump_forcing_leap.txt"
         met = camels.read_met(metfile).loc[self.startdate : self.enddate, :]
@@ -118,6 +118,7 @@ class VIC:
             self.forcingpath = outdir
             with open(f"{outdir}/data_{self.lat:.5f}_{self.lon:.5f}", "w") as fout:
                 for i, row in met.iterrows():
+                    prcp = 0.0 if zero_precip else row["Prcp"]
                     fout.write(
                         "{0:f} {1:.2f} {2:.2f} 5.00\n".format(
                             row["Prcp"], row["Tmax"], row["Tmin"]
@@ -186,7 +187,7 @@ class VIC:
         return (out.runoff + out.baseflow) / 1000
 
 
-def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data", vic_exec="vicNl"):
+def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data", vic_exec="vicNl", zero_precip=False):
     """Run VIC for multiple basins and return simulated vs observed streamflow."""
     basins = pd.read_csv(f"{datadir}/camels_topo.txt", sep=";", dtype={"gauge_id": str})
     mod = {}
@@ -194,7 +195,7 @@ def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data", vic_ex
     for bid in bids:
         gauge = basins.query("gauge_id == @bid").T.iloc[:, 0]
         model = VIC(soilfile, gauge, startdate, enddate, datadir=datadir, vic_exec=vic_exec)
-        model.forcings(forcing)
+        model.forcings(forcing, zero_precip=zero_precip)
         qfile = f"{datadir}/usgs/{model.bid}_streamflow_qc.txt"
         qobs = (
             camels.read_q(qfile).loc[model.startdate : model.enddate, "Flow"]
@@ -233,6 +234,7 @@ def calibrate(
     datadir="data",
     nprocs=None,
     vic_exec="vicNl",
+    zero_precip=False,
 ):
     """Calibrate VIC model using NSGA-II optimization."""
     if nprocs is None:
@@ -244,7 +246,7 @@ def calibrate(
     basins = pd.read_csv(f"{datadir}/camels_topo.txt", sep=";", dtype={"gauge_id": str})
     gauge = basins.query("gauge_id == @bid").T.iloc[:, 0]
     model = VIC(soilfile, gauge, startdate, enddate, datadir, vic_exec=vic_exec)
-    model.forcings(forcing)
+    model.forcings(forcing, zero_precip=zero_precip)
     qfile = f"{datadir}/usgs/{model.bid}_streamflow_qc.txt"
     obs = (
         camels.read_q(qfile).loc[model.startdate : model.enddate, "Flow"]
