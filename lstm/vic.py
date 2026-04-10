@@ -121,7 +121,7 @@ class VIC:
                     prcp = 0.0 if zero_precip else row["Prcp"]
                     fout.write(
                         "{0:f} {1:.2f} {2:.2f} 5.00\n".format(
-                            row["Prcp"], row["Tmax"], row["Tmin"]
+                            prcp, row["Tmax"], row["Tmin"]
                         )
                     )
 
