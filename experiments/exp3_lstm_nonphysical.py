@@ -26,7 +26,7 @@ def main():
     with h5py.File(str(h5path), "r") as f:
         xmean = f.attrs["xmean"][:]
         xstd = f.attrs["xstd"][:]
-    xmean, xstd = PERTURBATION.compute_stats(xmean, xstd)
+    
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -58,12 +58,12 @@ def main():
     print(f"Config saved to : {config_path}")
 
     print(f"\nEvaluating with '{forcing}' forcings + {SUFFIX} (training period)...")
-    mod, obs = evaluate(model, forcing, datadir=args.data_dir, perturbation=PERTURBATION, xmean=xmean, xstd=xstd)
+    mod, obs = evaluate(model, forcing, datadir=args.data_dir, perturbation=PERTURBATION)
     mod.to_csv(f"{output_dir}/ealstm_{forcing}_{SUFFIX}_train_predictions.csv")
     obs.to_csv(f"{output_dir}/ealstm_{forcing}_{SUFFIX}_train_observations.csv")
 
     print(f"Evaluating with '{forcing}' forcings + {SUFFIX} (validation period)...")
-    mod, obs = evaluate(model, forcing, val_tstart, val_tend, datadir=args.data_dir, perturbation=PERTURBATION, xmean=xmean, xstd=xstd)
+    mod, obs = evaluate(model, forcing, val_tstart, val_tend, datadir=args.data_dir, perturbation=PERTURBATION)
     mod.to_csv(f"{output_dir}/ealstm_{forcing}_{SUFFIX}_valid_predictions.csv")
     obs.to_csv(f"{output_dir}/ealstm_{forcing}_{SUFFIX}_valid_observations.csv")
 
