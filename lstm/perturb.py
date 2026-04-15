@@ -51,9 +51,6 @@ class ZeroPrecipitation(Perturbation):
     def compute_stats(self, xmean, xstd):
         xmean = xmean.copy()
         xstd = xstd.copy()
-        for dim in self.dims:
-            xmean[dim] = 0.0
-            xstd[dim] = 1.0
         return xmean, xstd
 
 class RandomPerturbation(Perturbation):
@@ -89,7 +86,7 @@ class RandomPerturbation(Perturbation):
         xstd = xstd.copy()
         for dim in self.dims:
             xstd[dim] = xstd[dim] * jnp.sqrt(1 + self.stddev**2)
-        return xmean, xstd 
+        return xmean, xstd
 
 class BiasPerturbation(Perturbation):
 
