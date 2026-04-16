@@ -84,8 +84,6 @@ class RandomPerturbation(Perturbation):
     def compute_stats(self, xmean, xstd):
         xmean = xmean.copy()
         xstd = xstd.copy()
-        for dim in self.dims:
-            xstd[dim] = xstd[dim] * jnp.sqrt(1 + self.stddev**2)
         return xmean, xstd
 
 class BiasPerturbation(Perturbation):
@@ -113,7 +111,4 @@ class BiasPerturbation(Perturbation):
     def compute_stats(self, xmean, xstd):
         xmean = xmean.copy()
         xstd = xstd.copy()
-        for dim in self.dims:
-            xmean[dim] = xmean[dim] * self.bias
-            xstd[dim] = xstd[dim] * self.bias
         return xmean, xstd
