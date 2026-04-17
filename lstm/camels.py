@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import h5py
+from typing import Optional
 
 import jax.random as jrn
 import jax.numpy as jnp
@@ -171,11 +172,11 @@ def get_data(bids, forcing, tstart, tend, seq_len, attribs, datadir="data"):
         ).dropna()
         sdata = (attribs.loc[bid, :] - attribs.mean()) / attribs.std()
         tr = data.loc[
-            tstart - pd.DateOffset(days=seq_len) : tend,
+            tstart - pd.DateOffset(days=seq_len-1) : tend,
             ["Prcp", "Tmax", "Tmin", "Srad", "Vp"],
         ]
         # REVIEW: if intermittent basins cause issues we can comment this back in
-        if len(tr) == ndays + seq_len:  # and (q['Flow'] > 0).all():
+        if len(tr) == ndays + seq_len - 1:  # and (q['Flow'] > 0).all():
             xt_ = tr.values.astype(np.float32)
             xst_ = sdata.values.astype(np.float32)
             yt_ = data.loc[tstart:tend, "Flow"].values.reshape(-1, 1)
@@ -265,20 +266,6 @@ def write_data(xt, xst, yt, sb, seq_len, h5path, chunksize=512):
         xmean = xsum / xcount
         xstd = np.sqrt(xsum2 / xcount - xmean**2)
         xstd = np.maximum(xstd, 1e-8)  # avoid division with zero
-        ds_xn = f.create_dataset(
-            "x_n",
-            shape=(n_samples, seq_len, n_dynamic),
-            dtype="float32",
-            chunks=(chunk_rows, seq_len, n_dynamic),
-        )
-        cursor = 0
-        for b, (x_b, y_b) in enumerate(zip(xt, yt)):
-            n = len(y_b)
-            x_seq = (
-                np.stack([x_b[t : t + seq_len] for t in range(n)], axis=0) - xmean
-            ) / xstd
-            ds_xn[cursor : cursor + n] = x_seq
-            cursor += n
         f.attrs["xmean"] = xmean.astype(np.float32)
         f.attrs["xstd"] = xstd.astype(np.float32)
         f.attrs["seq_len"] = seq_len
@@ -293,8 +280,10 @@ def generate_h5file(forcing, tstart, tend, seq_len, acols, datadir):
     with h5py.File(h5path, "a") as f:
         ds_bid = f.create_dataset("bids", shape=(len(bids), ), dtype=h5py.string_dtype())
         ds_bid[:] = np.array(bids)
+        f.attrs["tstart"] = tstart
+        f.attrs["tend"] = tend
 
-def dataloader(h5path, batch_size, key, shuffle=True, preload=False):
+def dataloader(h5path: str, batch_size:int, key: jrn.PRNGKey, shuffle: bool=True, preload: bool=False, perturbation: Optional['Perturbation']=None, pert_key: Optional[jrn.PRNGKey]=None):
     """
     Creates a data loader for HDF5 dataset.
 
@@ -311,6 +300,10 @@ def dataloader(h5path, batch_size, key, shuffle=True, preload=False):
     preload : bool, optional
         Whether to load the entire dataset into RAM at startup (default: False).
         Significantly faster if enough RAM is available (recommended if >64GB RAM).
+    perturbation : Perturbation, optional
+        Perturbation object to apply to inputs (default: None)
+    pert_key : jax.random.PRNGKey, optional
+        Random key for reproducible perturbations
 
     Yields:
     -------
@@ -320,11 +313,16 @@ def dataloader(h5path, batch_size, key, shuffle=True, preload=False):
     if preload:
         print("Loading dataset into memory...")
         with h5py.File(h5path, "r") as f:
-            x_all  = f["x_n"][:]
+            x_all  = f["x"][:]
             xs_all = f["xs"][:]
             y_all  = f["y"][:]
             s_all  = f["s"][:]
+            xmean  = f.attrs["xmean"]
+            xstd   = f.attrs["xstd"]
         print("Dataset loaded.")
+        # update scaling parameters if perturbation is used
+        if perturbation is not None:
+            xmean, xstd = perturbation.compute_stats(xmean, xstd)
         n_samples = x_all.shape[0]
         while True:
             indices = np.arange(n_samples)
@@ -335,8 +333,15 @@ def dataloader(h5path, batch_size, key, shuffle=True, preload=False):
                 rng.shuffle(indices)
             for start in range(0, n_samples - batch_size + 1, batch_size):
                 batch_idx = indices[start : start + batch_size]
+                x_batch = jnp.asarray(x_all[batch_idx])
+                if perturbation is not None:
+                    if pert_key is not None:
+                        x_batch, pert_key = perturbation(x_batch, pert_key)
+                    else:
+                        x_batch, _ = perturbation(x_batch)
+                x_batch = (x_batch - xmean) / xstd
                 yield (
-                    jnp.asarray(x_all[batch_idx]),
+                    x_batch,
                     jnp.asarray(xs_all[batch_idx]),
                     jnp.asarray(y_all[batch_idx]),
                     jnp.asarray(s_all[batch_idx]),
@@ -344,6 +349,8 @@ def dataloader(h5path, batch_size, key, shuffle=True, preload=False):
     else:
         with h5py.File(h5path, "r") as f:
             n_samples = f["x"].shape[0]
+            xmean = f.attrs["xmean"]
+            xstd  = f.attrs["xstd"]
             while True:
                 indices = np.arange(n_samples)
                 if shuffle:
@@ -355,13 +362,20 @@ def dataloader(h5path, batch_size, key, shuffle=True, preload=False):
                     batch_idx = indices[start : start + batch_size]
                     sorted_pos = np.argsort(batch_idx)
                     sorted_idx = batch_idx[sorted_pos]
-                    x_np  = f["x_n"][sorted_idx]
+                    x_np  = f["x"][sorted_idx]
                     xs_np = f["xs"][sorted_idx]
                     y_np  = f["y"][sorted_idx]
                     s_np  = f["s"][sorted_idx]
                     inv = np.argsort(sorted_pos)
+                    x_batch = jnp.asarray(x_np[inv])
+                    if perturbation is not None:
+                        if pert_key is not None:
+                            x_batch, pert_key = perturbation(x_batch, pert_key)
+                        else:
+                            x_batch, _ = perturbation(x_batch)
+                    x_batch = (x_batch - xmean) / xstd
                     yield (
-                        jnp.asarray(x_np[inv]),
+                        x_batch,
                         jnp.asarray(xs_np[inv]),
                         jnp.asarray(y_np[inv]),
                         jnp.asarray(s_np[inv]),

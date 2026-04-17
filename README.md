@@ -19,9 +19,9 @@ This project implements an Entity-Aware LSTM (EALSTM) model for hydrologic predi
 ├── experiments # experiment definitions and configuration
 │   ├── exp1_*_forcings.py # comparing forcing datasets
 |   ├── exp2_*_reproducibility.py # hydrologic reproducibility
-|   ├── exp3_*_random_error.py # random error in forcings
-|   ├── exp4_*_bias.py # bias in foricngs
-|   ├── exp5_*_nonphysical.py # non-physical inputs
+|   ├── exp3_*_nonphysical.py # non-physical inputs
+|   ├── exp4_*_random_error.py # random error in forcings
+|   ├── exp5_*_bias.py # bias in foricngs
 |   ├── exp6_*_splits.py # different sample splits
 ├── lstm # source code
 │   ├── __init__.py

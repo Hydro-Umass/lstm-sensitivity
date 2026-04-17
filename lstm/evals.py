@@ -5,10 +5,11 @@ import equinox as eqx
 import jax
 import jax.random as jrn
 import jax.numpy as jnp
+from tqdm import tqdm
 
 from lstm import camels, config
 
-def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data"):
+def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data", perturbation=None, xmean=None, xstd=None):
     """
     Evaluates the model on specified basins.
     It handles data normalization using mean and standard deviation stored in the HDF5 file.
@@ -27,6 +28,12 @@ def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data"):
        List of basin IDs to evaluate on.
     datadir : str, optional
         Directory path containing data files (default: "data")
+    perturbation : Perturbation, optional
+        Perturbation to apply to raw inputs before normalisation (default: None).
+    xmean : array-like, optional
+        Mean of training data for normalization. If None, reads from HDF5 file.
+    xstd : array-like, optional
+        Standard deviation of training data for normalization. If None, reads from HDF5 file.
 
     Returns:
     --------
@@ -37,8 +44,10 @@ def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data"):
     """
     h5path = f"{datadir}/{forcing}.h5"
     with h5py.File(h5path) as f:
-        xmean = f.attrs["xmean"]
-        xstd = f.attrs["xstd"]
+        if xmean is None:
+            xmean = f.attrs["xmean"]
+        if xstd is None:
+            xstd = f.attrs["xstd"]
         seq_len = f.attrs["seq_len"]
         if bids is None:
             bids = [b.decode() for b in f["bids"][:]]
@@ -50,9 +59,12 @@ def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data"):
     dt = pd.date_range(tstart, tend)
     mod = {}
     obs = {}
-    for bi, bid in enumerate(bids):
-        xt_ = np.stack([xt[bi][t:t+seq_len, :] for t in range(xt[bi].shape[0]-seq_len)])
-        xst_ = np.stack([xst[bi] for _ in range(xt[bi].shape[0]-seq_len)])
+    for bi, bid in enumerate(tqdm(bids, desc="Evaluating")):
+        xt_ = np.stack([xt[bi][t:t+seq_len, :] for t in range(xt[bi].shape[0]-seq_len+1)])
+        xst_ = np.stack([xst[bi] for _ in range(xt[bi].shape[0]-seq_len+1)])
+        xt_ = jnp.asarray(xt_)
+        if perturbation is not None:
+            xt_, _ = perturbation(xt_)
         xt_ = (xt_ - xmean) / xstd
         inf_model = eqx.nn.inference_mode(model)
         pred = jax.vmap(inf_model)(xt_, xst_, key=jrn.split(jrn.PRNGKey(0), xt_.shape[0]))

@@ -89,6 +89,25 @@ def parse_args_lstm():
         help="Directory where the trained model and config will be saved.",
     )
 
+    # Perturbation args for sensitivity experiments
+    parser.add_argument(
+        "--bias",
+        type=float,
+        nargs="+",
+        default=None,
+        metavar="B",
+        help="One or more precipitation bias multipliers to sweep over.",
+    )
+
+    parser.add_argument(
+        "--stddev",
+        type=float,
+        nargs="+",
+        default=None,
+        metavar="S",
+        help="One or more random error standard deviations to sweep over.",
+    )
+
     return parser.parse_args()
 
 
@@ -111,7 +130,7 @@ def parse_args_vic():
         default="vicNl",
         help="Path to the VIC executable. ",
     )
-    
+
     parser.add_argument(
         "--data-dir",
         type=str,
