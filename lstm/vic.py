@@ -110,10 +110,27 @@ class VIC:
                     # Keep other lines as-is
                     fout.write(line + "\n")
 
-    def forcings(self, forcing, zero_precip=False):
+    def forcings(self, forcing, zero_precip=False, noise_stddev=0.0, noise_seed=None, bias_factor=1.0):
         """Write forcing file from CAMELS data."""
         metfile = f"{self.datadir}/{forcing}/{self.bid}_lump_forcing_leap.txt"
         met = camels.read_met(metfile).loc[self.startdate : self.enddate, :]
+
+
+        # modifications to precipitation
+        if noise_stddev > 0.0 or bias_factor != 1.0:
+            met = met.copy()
+            # bias (multiplicative scaling)
+            if bias_factor != 1.0:
+                met["Prcp"] = met["Prcp"] * bias_factor
+            # random noise
+            if noise_stddev > 0.0:
+                rng = np.random.default_rng(noise_seed)
+                noise = rng.normal(1.0, noise_stddev, len(met))
+                noise = np.maximum(noise, 0.0)
+                met["Prcp"] = met["Prcp"] * noise
+            # non-negative
+            met["Prcp"] = np.maximum(met["Prcp"], 0.0)
+
         with tempfile.TemporaryDirectory(dir=f"{self.datadir}/forcings", delete=False) as outdir:
             self.forcingpath = outdir
             with open(f"{outdir}/data_{self.lat:.5f}_{self.lon:.5f}", "w") as fout:
@@ -187,7 +204,7 @@ class VIC:
         return (out.runoff + out.baseflow) / 1000
 
 
-def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data", vic_exec="vicNl", zero_precip=False):
+def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data", vic_exec="vicNl", zero_precip=False, noise_stddev=0.0, bias_factor=1.0):
     """Run VIC for multiple basins and return simulated vs observed streamflow."""
     basins = pd.read_csv(f"{datadir}/camels_topo.txt", sep=";", dtype={"gauge_id": str})
     mod = {}
@@ -195,7 +212,10 @@ def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data", vic_ex
     for bid in bids:
         gauge = basins.query("gauge_id == @bid").T.iloc[:, 0]
         model = VIC(soilfile, gauge, startdate, enddate, datadir=datadir, vic_exec=vic_exec)
-        model.forcings(forcing, zero_precip=zero_precip)
+        noise_seed = int(bid) if noise_stddev > 0.0 else None  #adding basin ID as seed for reproducible noise per basin
+        model.forcings(forcing, zero_precip=zero_precip,
+                       noise_stddev=noise_stddev, noise_seed=noise_seed,
+                       bias_factor=bias_factor)
         qfile = f"{datadir}/usgs/{model.bid}_streamflow_qc.txt"
         qobs = (
             camels.read_q(qfile).loc[model.startdate : model.enddate, "Flow"]
@@ -235,6 +255,8 @@ def calibrate(
     nprocs=None,
     vic_exec="vicNl",
     zero_precip=False,
+    noise_stddev=0.0,
+    bias_factor=1.0,
 ):
     """Calibrate VIC model using NSGA-II optimization."""
     if nprocs is None:
@@ -246,7 +268,10 @@ def calibrate(
     basins = pd.read_csv(f"{datadir}/camels_topo.txt", sep=";", dtype={"gauge_id": str})
     gauge = basins.query("gauge_id == @bid").T.iloc[:, 0]
     model = VIC(soilfile, gauge, startdate, enddate, datadir, vic_exec=vic_exec)
-    model.forcings(forcing, zero_precip=zero_precip)
+    noise_seed = int(bid) if noise_stddev > 0.0 else None  #adding basin ID as seed for reproducible noise per basin
+    model.forcings(forcing, zero_precip=zero_precip,
+                   noise_stddev=noise_stddev, noise_seed=noise_seed,
+                   bias_factor=bias_factor)
     qfile = f"{datadir}/usgs/{model.bid}_streamflow_qc.txt"
     obs = (
         camels.read_q(qfile).loc[model.startdate : model.enddate, "Flow"]

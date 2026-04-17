@@ -150,6 +150,24 @@ def parse_args_vic():
         help="Directory where calibration results will be saved.",
     )
 
+    parser.add_argument(
+        "--stddev",
+        type=float,
+        nargs="+",
+        default=None,
+        metavar="S",
+        help="One or more random error standard deviations to sweep over.",
+    )
+    
+    parser.add_argument(
+        "--bias",
+        type=float,
+        nargs="+",
+        default=None,
+        metavar="B",
+        help="One or more precipitation bias multipliers to sweep over.",
+    )
+
     return parser.parse_args()
 
 
