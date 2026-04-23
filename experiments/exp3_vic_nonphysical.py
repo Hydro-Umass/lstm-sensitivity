@@ -3,7 +3,9 @@ from tqdm import tqdm
 import h5py
 
 from lstm import config, vic
+from lstm.perturb import ZeroPrecipitation
 
+PERTURBATION = ZeroPrecipitation(dims=(0,))
 SUFFIX = "zero_precip"
 
 def main():
@@ -27,7 +29,7 @@ def main():
                 bid, soilfile, args.forcing, startdate, enddate,
                 datadir=args.data_dir,
                 vic_exec=args.vic_exec,
-                zero_precip=True,
+                perturbation=PERTURBATION,
             )
             fout.write(line)
 
@@ -37,7 +39,7 @@ def main():
         bids, outfile, args.forcing, startdate, enddate,
         datadir=args.data_dir,
         vic_exec=args.vic_exec,
-        zero_precip=True,
+        perturbation=PERTURBATION,
     )
     mod.to_csv(f"{output_dir}/vic_{args.forcing}_{SUFFIX}_train_predictions.csv")
     obs.to_csv(f"{output_dir}/vic_{args.forcing}_{SUFFIX}_train_observations.csv")

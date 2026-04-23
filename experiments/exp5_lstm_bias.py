@@ -7,15 +7,12 @@ from lstm import config
 from lstm.evals import evaluate
 from lstm.perturb import BiasPerturbation
 
-
 DIMS = (0,)
-
 
 def get_biases(args):
     if args.bias is None:
         return [0.5, 1.5]
     return args.bias
-
 
 def main():
     args = config.parse_args_lstm()
