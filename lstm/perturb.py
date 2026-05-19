@@ -1,4 +1,5 @@
 import jax.random as jrn
+import jax.numpy as jnp
 from abc import ABC, abstractmethod
 
 class Perturbation(ABC):
@@ -14,6 +15,9 @@ class Perturbation(ABC):
 
     def get_config(self):
         return {'type': self.name}
+
+    def compute_stats(self, xmean, xstd):
+        return xmean, xstd
 
 class NoPerturbation(Perturbation):
 
@@ -44,6 +48,11 @@ class ZeroPrecipitation(Perturbation):
             "dims": self.dims
         }
 
+    def compute_stats(self, xmean, xstd):
+        xmean = xmean.copy()
+        xstd = xstd.copy()
+        return xmean, xstd
+
 class RandomPerturbation(Perturbation):
 
     def __init__(self, stddev=0.1, dims=(0,)):
@@ -72,6 +81,11 @@ class RandomPerturbation(Perturbation):
             "stddev": self.stddev,
         }
 
+    def compute_stats(self, xmean, xstd):
+        xmean = xmean.copy()
+        xstd = xstd.copy()
+        return xmean, xstd
+
 class BiasPerturbation(Perturbation):
 
     def __init__(self, mbias=1.1, dims=(0,)):
@@ -93,3 +107,8 @@ class BiasPerturbation(Perturbation):
             "dims": self.dims,
             "bias": self.bias,
         }
+
+    def compute_stats(self, xmean, xstd):
+        xmean = xmean.copy()
+        xstd = xstd.copy()
+        return xmean, xstd

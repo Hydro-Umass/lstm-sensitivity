@@ -1,3 +1,4 @@
+import h5py
 import equinox as eqx
 from pathlib import Path
 
@@ -22,6 +23,10 @@ def main():
             f"HDF5 file not found: {h5path}. "
             f"Expected a file named '{forcing}.h5' in '{args.data_dir}'."
         )
+    with h5py.File(str(h5path), "r") as f:
+        xmean = f.attrs["xmean"][:]
+        xstd = f.attrs["xstd"][:]
+    
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)

@@ -9,6 +9,8 @@ from platypus import NSGAII, Problem, Real, ProcessPoolEvaluator
 
 from lstm import camels
 
+import jax.numpy as jnp
+import jax.random as jrn
 
 class VIC:
     """VIC hydrologic model wrapper."""
@@ -110,17 +112,27 @@ class VIC:
                     # Keep other lines as-is
                     fout.write(line + "\n")
 
-    def forcings(self, forcing):
+    def forcings(self, forcing, perturbation=None, seed=None):
         """Write forcing file from CAMELS data."""
         metfile = f"{self.datadir}/{forcing}/{self.bid}_lump_forcing_leap.txt"
         met = camels.read_met(metfile).loc[self.startdate : self.enddate, :]
+
+        if perturbation is not None:
+            data_cols = ["Prcp", "Tmax", "Tmin", "Srad", "Vp"]
+            x = jnp.asarray(met.loc[:, data_cols].values)
+            x = x[None, :, :] # add dummy batch dimension
+            key = jrn.PRNGKey(0) if seed is None else jrn.PRNGKey(seed)
+            x, _ = perturbation(x, key=key)
+            met.loc[:, data_cols] = np.asarray(x[0])
+
         with tempfile.TemporaryDirectory(dir=f"{self.datadir}/forcings", delete=False) as outdir:
             self.forcingpath = outdir
             with open(f"{outdir}/data_{self.lat:.5f}_{self.lon:.5f}", "w") as fout:
                 for i, row in met.iterrows():
+                    prcp = row["Prcp"]
                     fout.write(
                         "{0:f} {1:.2f} {2:.2f} 5.00\n".format(
-                            row["Prcp"], row["Tmax"], row["Tmin"]
+                            prcp, row["Tmax"], row["Tmin"]
                         )
                     )
 
@@ -186,7 +198,7 @@ class VIC:
         return (out.runoff + out.baseflow) / 1000
 
 
-def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data", vic_exec="vicNl"):
+def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data", vic_exec="vicNl", perturbation=None, seed=None):
     """Run VIC for multiple basins and return simulated vs observed streamflow."""
     basins = pd.read_csv(f"{datadir}/camels_topo.txt", sep=";", dtype={"gauge_id": str})
     mod = {}
@@ -194,7 +206,7 @@ def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data", vic_ex
     for bid in bids:
         gauge = basins.query("gauge_id == @bid").T.iloc[:, 0]
         model = VIC(soilfile, gauge, startdate, enddate, datadir=datadir, vic_exec=vic_exec)
-        model.forcings(forcing)
+        model.forcings(forcing, perturbation=perturbation, seed=seed)
         qfile = f"{datadir}/usgs/{model.bid}_streamflow_qc.txt"
         qobs = (
             camels.read_q(qfile).loc[model.startdate : model.enddate, "Flow"]
@@ -233,6 +245,8 @@ def calibrate(
     datadir="data",
     nprocs=None,
     vic_exec="vicNl",
+    perturbation=None,
+    seed=None,
 ):
     """Calibrate VIC model using NSGA-II optimization."""
     if nprocs is None:
@@ -244,7 +258,7 @@ def calibrate(
     basins = pd.read_csv(f"{datadir}/camels_topo.txt", sep=";", dtype={"gauge_id": str})
     gauge = basins.query("gauge_id == @bid").T.iloc[:, 0]
     model = VIC(soilfile, gauge, startdate, enddate, datadir, vic_exec=vic_exec)
-    model.forcings(forcing)
+    model.forcings(forcing, perturbation=perturbation, seed=seed)
     qfile = f"{datadir}/usgs/{model.bid}_streamflow_qc.txt"
     obs = (
         camels.read_q(qfile).loc[model.startdate : model.enddate, "Flow"]

@@ -320,6 +320,9 @@ def dataloader(h5path: str, batch_size:int, key: jrn.PRNGKey, shuffle: bool=True
             xmean  = f.attrs["xmean"]
             xstd   = f.attrs["xstd"]
         print("Dataset loaded.")
+        # update scaling parameters if perturbation is used
+        if perturbation is not None:
+            xmean, xstd = perturbation.compute_stats(xmean, xstd)
         n_samples = x_all.shape[0]
         while True:
             indices = np.arange(n_samples)

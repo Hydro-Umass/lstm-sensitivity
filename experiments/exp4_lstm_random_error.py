@@ -1,4 +1,4 @@
-import argparse
+import h5py
 import equinox as eqx
 from pathlib import Path
 
@@ -29,6 +29,10 @@ def main():
             f"Expected a file named '{forcing}.h5' in '{args.data_dir}'."
         )
 
+    with h5py.File(str(h5path), "r") as f:
+        base_xmean = f.attrs["xmean"][:]
+        base_xstd = f.attrs["xstd"][:]
+
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -41,6 +45,8 @@ def main():
         print(f"\n{'='*60}")
         print(f"Training with RandomPerturbation stddev={stddev}")
         print(f"{'='*60}")
+
+        xmean, xstd = perturbation.compute_stats(base_xmean, base_xstd)
 
         model_path = output_dir / f"ealstm_{forcing}_{suffix}.eqx"
         config_path = output_dir / f"ealstm_{forcing}_{suffix}.toml"
@@ -68,12 +74,18 @@ def main():
         print(f"Config saved to : {config_path}")
 
         print(f"\nEvaluating with '{forcing}' forcings + {suffix} (training period)...")
-        mod, obs = evaluate(model, forcing, datadir=args.data_dir, perturbation=perturbation)
+        mod, obs = evaluate(
+            model, forcing, datadir=args.data_dir,
+            perturbation=perturbation, xmean=xmean, xstd=xstd
+        )
         mod.to_csv(f"{output_dir}/ealstm_{forcing}_{suffix}_train_predictions.csv")
         obs.to_csv(f"{output_dir}/ealstm_{forcing}_{suffix}_train_observations.csv")
 
         print(f"Evaluating with '{forcing}' forcings + {suffix} (validation period)...")
-        mod, obs = evaluate(model, forcing, val_tstart, val_tend, datadir=args.data_dir, perturbation=perturbation)
+        mod, obs = evaluate(
+            model, forcing, val_tstart, val_tend, datadir=args.data_dir,
+            perturbation=perturbation, xmean=xmean, xstd=xstd
+        )
         mod.to_csv(f"{output_dir}/ealstm_{forcing}_{suffix}_valid_predictions.csv")
         obs.to_csv(f"{output_dir}/ealstm_{forcing}_{suffix}_valid_observations.csv")
 
