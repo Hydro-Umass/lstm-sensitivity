@@ -38,23 +38,10 @@ def main():
     soilfile = f"{args.data_dir}/vic/vic.nldas.mexico.soil.txt"
 
     for stddev in stddevs:
-        suffix = f"random_error_std{stddev}"
+        suffix = f"infer_random_error_std{stddev}"
         perturbation = perturb.RandomPerturbation(stddev=stddev, dims=(0,))
-        print(f"\n{'='*60}")
-        print(f"Calibrating VIC with {forcing} forcings + {suffix}...")
-        print(f"{'='*60}")
 
-        outfile = f"{output_dir}/vic_{forcing}_{suffix}_baseline_soil.txt"
-        with open(outfile, "w") as fout:
-            for bid in tqdm(bids):
-                line = vic.calibrate(
-                    bid, soilfile, forcing, startdate, enddate,
-                    datadir=args.data_dir,
-                    vic_exec=args.vic_exec,
-                    perturbation=perturbation,
-                    seed=args.seed
-                )
-                fout.write(line)
+        outfile = f"{output_dir}/vic_{forcing}_baseline_soil.txt"
 
         # Evaluate training period
         print(f"\nEvaluating {forcing} + {suffix} (training period)...")

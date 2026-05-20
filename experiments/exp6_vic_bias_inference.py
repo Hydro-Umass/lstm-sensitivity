@@ -40,20 +40,8 @@ def main():
 
     for bias in biases:
         perturbation = BiasPerturbation(mbias=bias, dims=DIMS)
-        suffix = f"bias{bias}"
-        outfile = f"{output_dir}/vic_{args.forcing}_{suffix}_baseline_soil.txt"
-
-        # Calibrate with biased precipitation
-        print(f"Calibrating VIC with {args.forcing} forcings + {suffix}...")
-        with open(outfile, "w") as fout:
-            for bid in tqdm(bids):
-                line = vic.calibrate(
-                    bid, soilfile, args.forcing, startdate, enddate,
-                    datadir=args.data_dir,
-                    vic_exec=args.vic_exec,
-                    perturbation=perturbation,
-                )
-                fout.write(line)
+        suffix = f"infer_bias{bias}"
+        outfile = f"{output_dir}/vic_{args.forcing}_baseline_soil.txt"
 
         # Evaluate training period
         print(f"\nEvaluating {args.forcing} + {suffix} (training period)...")
