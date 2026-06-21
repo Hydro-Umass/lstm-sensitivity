@@ -32,7 +32,9 @@ def load_predictions(path, obs_cols):
             p = gz
         else:
             raise FileNotFoundError(f"Cannot find {path} or {path}.gz")
-    return pd.read_csv(p, index_col=0, parse_dates=True).loc[:, obs_cols]
+    df = pd.read_csv(p, index_col=0, parse_dates=True)
+    common = [c for c in obs_cols if c in df.columns]
+    return df.loc[:, common]
 
 
 def plot_ecdf(ax, nse_vals, label, color, linestyle, linewidth=1.5):
@@ -55,7 +57,7 @@ def _pred_path(prefix, row_type, signed_bias):
 
 def build_panel(ax, prefix, obs, row_type, panel_label, title):
     base_pred = load_predictions(OUTPUT_DIR / f"{prefix}_valid_predictions.csv", obs.columns)
-    plot_ecdf(ax, nse(obs, base_pred), "Baseline", "black", "-", linewidth=2.0)
+    plot_ecdf(ax, nse(obs[base_pred.columns], base_pred), "Baseline", "black", "-", linewidth=2.0)
 
     # Negative bias — green family, light → dark
     neg_colors = ["#a1d99b", "#41ab5d", "#006d2c"]
@@ -64,7 +66,7 @@ def build_panel(ax, prefix, obs, row_type, panel_label, title):
         path = _pred_path(prefix, row_type, -lvl)
         try:
             pred = load_predictions(path, obs.columns)
-            plot_ecdf(ax, nse(obs, pred), f"Bias −{int(lvl*100)}%", col, ls)
+            plot_ecdf(ax, nse(obs[pred.columns], pred), f"Bias −{int(lvl*100)}%", col, ls)
         except FileNotFoundError:
             print(f"Warning: {path} not found, skipping.")
 
@@ -75,7 +77,7 @@ def build_panel(ax, prefix, obs, row_type, panel_label, title):
         path = _pred_path(prefix, row_type, lvl)
         try:
             pred = load_predictions(path, obs.columns)
-            plot_ecdf(ax, nse(obs, pred), f"Bias +{int(lvl*100)}%", col, ls)
+            plot_ecdf(ax, nse(obs[pred.columns], pred), f"Bias +{int(lvl*100)}%", col, ls)
         except FileNotFoundError:
             print(f"Warning: {path} not found, skipping.")
 
@@ -91,15 +93,15 @@ def bias_cdfs():
     vic_obs  = pd.read_csv(OUTPUT_DIR / f"vic_{FORCING}_valid_observations.csv.gz",
                            index_col=0, parse_dates=True)
 
-    fig, axes = plt.subplots(2, 3, figsize=(27, 12), sharex=True, sharey=True)
+    fig, axes = plt.subplots(3, 2, figsize=(18, 20), sharex=True, sharey=True)
 
     panels = [
         (axes[0, 0], f"ealstm_{FORCING}", lstm_obs, "train_eval",  "(a)", "LSTM - train & eval perturbed"),
-        (axes[0, 1], f"ealstm_{FORCING}", lstm_obs, "train_only",  "(b)", "LSTM - train perturbed, eval baseline"),
-        (axes[0, 2], f"ealstm_{FORCING}", lstm_obs, "infer_only",  "(c)", "LSTM - train baseline, eval perturbed"),
-        (axes[1, 0], f"vic_{FORCING}",    vic_obs,  "train_eval",  "(d)", "VIC - train & eval perturbed"),
-        (axes[1, 1], f"vic_{FORCING}",    vic_obs,  "train_only",  "(e)", "VIC - train perturbed, eval baseline"),
-        (axes[1, 2], f"vic_{FORCING}",    vic_obs,  "infer_only",  "(f)", "VIC - train baseline, eval perturbed"),
+        (axes[0, 1], f"vic_{FORCING}",    vic_obs,  "train_eval",  "(b)", "VIC - train & eval perturbed"),
+        (axes[1, 0], f"ealstm_{FORCING}", lstm_obs, "train_only",  "(c)", "LSTM - train perturbed, eval baseline"),
+        (axes[1, 1], f"vic_{FORCING}",    vic_obs,  "train_only",  "(d)", "VIC - train perturbed, eval baseline"),
+        (axes[2, 0], f"ealstm_{FORCING}", lstm_obs, "infer_only",  "(e)", "LSTM - train baseline, eval perturbed"),
+        (axes[2, 1], f"vic_{FORCING}",    vic_obs,  "infer_only",  "(f)", "VIC - train baseline, eval perturbed"),
     ]
 
     for ax, prefix, obs, row_type, label, title in panels:
@@ -107,7 +109,7 @@ def bias_cdfs():
 
     for ax in axes[:, 0]:
         ax.set_ylabel("Fraction of basins")
-    for ax in axes[1, :]:
+    for ax in axes[2, :]:
         ax.set_xlabel("NSE")
 
     neg_colors = ["#a1d99b", "#41ab5d", "#006d2c"]
@@ -119,7 +121,7 @@ def bias_cdfs():
         [mlines.Line2D([], [], color=c, linestyle=ls, label=f"Bias +{int(lvl*100)}%")
          for lvl, c, ls in zip(BIAS_LEVELS, pos_colors, ["--", "--", "-"])]
     )
-    fig.legend(handles=legend_handles, loc="lower center", ncol=7,
+    fig.legend(handles=legend_handles, loc="lower center", ncol=4,
                frameon=False, bbox_to_anchor=(0.5, 0.01))
 
     fig.tight_layout(rect=[0, 0.06, 1, 1])
