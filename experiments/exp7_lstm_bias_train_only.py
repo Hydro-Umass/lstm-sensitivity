@@ -52,7 +52,7 @@ def main():
     val_tend = "2008-09-30"
 
     for bias in biases:
-        perturbation = BiasPerturbation(mbias=bias, dims=DIMS)
+        perturbation = BiasPerturbation(mbias=1 + bias, dims=DIMS)
         train_suffix = f"bias{bias}"
         eval_suffix = f"bias{bias}_noperturb"
 

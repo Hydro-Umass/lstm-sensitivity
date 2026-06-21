@@ -39,7 +39,7 @@ def main():
     soilfile = f"{args.data_dir}/vic/vic.nldas.mexico.soil.txt"
 
     for bias in biases:
-        perturbation = BiasPerturbation(mbias=bias, dims=DIMS)
+        perturbation = BiasPerturbation(mbias=1 + bias, dims=DIMS)
         suffix = f"infer_bias{bias}"
         outfile = f"{output_dir}/vic_{args.forcing}_baseline_soil.txt"
 

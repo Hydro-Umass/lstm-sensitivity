@@ -69,7 +69,7 @@ def main():
         print(f"Config already exists at {config_path}, skipping save.")
 
     for bias in biases:
-        perturbation = BiasPerturbation(mbias=bias, dims=DIMS)
+        perturbation = BiasPerturbation(mbias=1 + bias, dims=DIMS)
         suffix = f"infer_bias{bias}"
 
         print(f"\nEvaluating with '{forcing}' forcings (training period)...")
