@@ -68,7 +68,7 @@ def train_ealstm(
         current_epoch = (step + 1) // steps_per_epoch
         pbar.set_postfix(epoch=current_epoch, loss=f"{loss:.4f}")
         pbar.update(1)
-        # Log at end of each epoch
+        # log at end of each epoch
         if (step + 1) % steps_per_epoch == 0:
             tqdm.write(f"Epoch {current_epoch} completed - Loss: {loss:.6f}")
     return model

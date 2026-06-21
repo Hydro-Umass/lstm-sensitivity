@@ -109,7 +109,7 @@ class VIC:
                     else:
                         fout.write(line + "\n")
                 else:
-                    # Keep other lines as-is
+                    # keep other lines as-is
                     fout.write(line + "\n")
 
     def forcings(self, forcing, perturbation=None, seed=None):
@@ -233,7 +233,7 @@ class VICObjective:
         nse = 1 - np.sum((self.obs - q) ** 2) / np.sum(
             (self.obs - np.mean(self.obs)) ** 2
         )
-        return [-nse]  # Minimize negative NSE
+        return [-nse]  # minimize negative NSE
 
 
 def calibrate(
