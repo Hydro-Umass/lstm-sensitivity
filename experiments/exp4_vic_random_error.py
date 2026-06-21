@@ -5,8 +5,6 @@ import numpy as np
 
 from lstm import config, vic, perturb
 
-# currently the perturb module is using Jax but the VIC calibration code is calling `os.fork` which causes a bunch of runtime warning
-# these warnings can be ignored
 # TODO: we should make perturb use numpy instead of jax but need to make sure it's compatible with the LSTM dataloader
 import warnings
 
@@ -56,7 +54,6 @@ def main():
                 )
                 fout.write(line)
 
-        # Evaluate training period
         print(f"\nEvaluating {forcing} + {suffix} (training period)...")
         mod, obs = vic.evaluate(
             bids, outfile, forcing, startdate, enddate,
@@ -68,7 +65,6 @@ def main():
         mod.to_csv(f"{output_dir}/vic_{forcing}_{suffix}_train_predictions.csv")
         obs.to_csv(f"{output_dir}/vic_{forcing}_{suffix}_train_observations.csv")
 
-        # Evaluate validation period
         val_tstart = "2000-10-01"
         val_tend = "2008-09-30"
         print(f"Evaluating {forcing} + {suffix} (validation period)...")

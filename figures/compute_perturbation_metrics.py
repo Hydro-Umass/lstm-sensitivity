@@ -4,8 +4,6 @@ Outputs two LaTeX tables:
   Table S2 — random error (NSE, KGE, r, α, β, FHV) for LSTM and VIC
   Table S3 — systematic bias (NSE, KGE, r, α, β, FHV, FLV, rMAE) for LSTM and VIC
 
-Run from ~/Projects/lstm:
-  .venv/bin/python lstm-sensitivity/figures/compute_perturbation_metrics.py
 """
 
 import pandas as pd
@@ -105,9 +103,6 @@ def stats_bias(obs, sim):
     return d
 
 
-# ---------------------------------------------------------------------------
-# Collect random error rows
-# ---------------------------------------------------------------------------
 STD_LEVELS = [0.1, 0.25, 0.5]
 
 rand_rows = []
@@ -142,9 +137,6 @@ for model, prefix_base in [("LSTM", f"ealstm_{FORCING}"), ("VIC", f"vic_{FORCING
 
 rand_df = pd.DataFrame(rand_rows)
 
-# ---------------------------------------------------------------------------
-# Collect bias rows
-# ---------------------------------------------------------------------------
 BIAS_LEVELS = [-0.5, -0.25, -0.1, 0.1, 0.25, 0.5]
 
 bias_rows = []
@@ -179,11 +171,6 @@ for model, prefix_base in [("LSTM", f"ealstm_{FORCING}"), ("VIC", f"vic_{FORCING
                 )
 
 bias_df = pd.DataFrame(bias_rows)
-
-
-# ---------------------------------------------------------------------------
-# LaTeX helpers
-# ---------------------------------------------------------------------------
 
 def fmt(v, decimals=2, signed=False):
     if v is None or (isinstance(v, float) and np.isnan(v)):

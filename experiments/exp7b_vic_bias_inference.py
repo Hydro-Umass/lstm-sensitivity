@@ -5,8 +5,6 @@ import h5py
 from lstm import config, vic
 from lstm.perturb import BiasPerturbation
 
-# currently the perturb module is using Jax but the VIC calibration code is calling `os.fork` which causes a bunch of runtime warning
-# these warnings can be ignored
 # TODO: we should make perturb use numpy instead of jax but need to make sure it's compatible with the LSTM dataloader
 import warnings
 
@@ -43,7 +41,6 @@ def main():
         suffix = f"infer_bias{bias}"
         outfile = f"{output_dir}/vic_{args.forcing}_baseline_soil.txt"
 
-        # Evaluate training period
         print(f"\nEvaluating {args.forcing} + {suffix} (training period)...")
         mod, obs = vic.evaluate(
             bids, outfile, args.forcing, startdate, enddate,
@@ -54,7 +51,6 @@ def main():
         mod.to_csv(f"{output_dir}/vic_{args.forcing}_{suffix}_train_predictions.csv")
         obs.to_csv(f"{output_dir}/vic_{args.forcing}_{suffix}_train_observations.csv")
 
-        # Evaluate validation period
         val_tstart = "2000-10-01"
         val_tend = "2008-09-30"
         print(f"Evaluating {args.forcing} + {suffix} (validation period)...")

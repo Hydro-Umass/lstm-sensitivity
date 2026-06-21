@@ -43,7 +43,7 @@ def main():
         train_suffix = f"bias{bias}"
         eval_suffix = f"bias{bias}_noperturb"
 
-        # Soil file produced by exp5 (calibrated with biased precipitation).
+        # soil file produced by exp5 (calibrated with biased precipitation).
         soilfile = f"{output_dir}/vic_{forcing}_{train_suffix}_baseline_soil.txt"
         if not Path(soilfile).exists():
             raise FileNotFoundError(
@@ -51,7 +51,7 @@ def main():
                 f"Run exp5_vic_bias.py first to calibrate VIC with the biased forcing."
             )
 
-        # Evaluate with baseline (unperturbed) precipitation.
+        # evaluate with baseline (unperturbed) precipitation.
         print(f"\nEvaluating VIC '{forcing}' baseline forcings with model "
               f"calibrated on {train_suffix} (training period)...")
         mod, obs = vic.evaluate(

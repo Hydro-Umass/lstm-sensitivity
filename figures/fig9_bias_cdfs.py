@@ -59,7 +59,7 @@ def build_panel(ax, prefix, obs, row_type, panel_label, title):
     base_pred = load_predictions(OUTPUT_DIR / f"{prefix}_valid_predictions.csv", obs.columns)
     plot_ecdf(ax, nse(obs[base_pred.columns], base_pred), "Baseline", "black", "-", linewidth=2.0)
 
-    # Negative bias — green family, light → dark
+    # negative bias
     neg_colors = ["#a1d99b", "#41ab5d", "#006d2c"]
     neg_styles = ["--", "--", "-"]
     for lvl, col, ls in zip(BIAS_LEVELS, neg_colors, neg_styles):
@@ -70,7 +70,7 @@ def build_panel(ax, prefix, obs, row_type, panel_label, title):
         except FileNotFoundError:
             print(f"Warning: {path} not found, skipping.")
 
-    # Positive bias — orange-red family, light → dark
+    # positive bias
     pos_colors = ["#fdae6b", "#f16913", "#a63603"]
     pos_styles = ["--", "--", "-"]
     for lvl, col, ls in zip(BIAS_LEVELS, pos_colors, pos_styles):

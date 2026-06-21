@@ -41,7 +41,7 @@ def main():
         train_suffix = f"random_error_std{stddev}"
         eval_suffix = f"random_error_std{stddev}_noperturb"
 
-        # Soil file produced by exp4 (calibrated with perturbed precipitation).
+        # soil file produced by exp4 (calibrated with perturbed precipitation).
         soilfile = f"{output_dir}/vic_{forcing}_{train_suffix}_baseline_soil.txt"
         if not Path(soilfile).exists():
             raise FileNotFoundError(
@@ -49,7 +49,7 @@ def main():
                 f"Run exp4_vic_random_error.py first to calibrate VIC with the perturbed forcing."
             )
 
-        # Evaluate with baseline (unperturbed) precipitation.
+        # evaluate with baseline (unperturbed) precipitation.
         print(f"\nEvaluating VIC '{forcing}' baseline forcings with model "
               f"calibrated on {train_suffix} (training period)...")
         mod, obs = vic.evaluate(

@@ -59,7 +59,7 @@ def main():
         model_path = output_dir / f"ealstm_{forcing}_{train_suffix}.eqx"
         model = load_model(model_path, h5path, args)
 
-        # Evaluate on baseline (no perturbation); xmean/xstd read from H5 file,
+        # evaluate on baseline (no perturbation); xmean/xstd read from H5 file,
         # which stores the unperturbed baseline statistics.
         print(f"\nEvaluating '{forcing}' baseline forcings with model "
               f"trained on {train_suffix} (training period)...")

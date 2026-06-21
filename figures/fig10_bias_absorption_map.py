@@ -59,7 +59,7 @@ def bias_absorption_map():
 
     nse_base = nse(obs, load_predictions(OUTPUT_DIR / f"{prefix}_valid_predictions.csv", obs.columns)).clip(lower=-1.0)
 
-    # Compute ΔNSE for both bias levels; clip per-basin NSE to [-1, 1] before differencing
+    # compute ΔNSE for both bias levels; clip per-basin NSE to [-1, 1] before differencing
     # to prevent extreme outliers from collapsing the color scale.
     bias_conditions = [(-0.5, "(a)", "Bias −50%"), (0.5, "(b)", "Bias +50%")]
     dnse_series = {}

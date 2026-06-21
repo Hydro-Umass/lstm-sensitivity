@@ -17,7 +17,7 @@ from pathlib import Path
 
 OUTPUT_DIR = Path("outputs")
 FORCING = "daymet"
-# Ordered by signed magnitude so the asymmetry pattern reads top-to-bottom.
+# ordered by signed magnitude so the asymmetry pattern reads top-to-bottom.
 BIAS_LEVELS = [-0.5, -0.25, -0.1, 0.1, 0.25, 0.5]
 
 

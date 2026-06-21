@@ -21,7 +21,6 @@ def main():
     soilfile = f"{args.data_dir}/vic/vic.nldas.mexico.soil.txt"
     outfile = f"{output_dir}/vic_{args.forcing}_{SUFFIX}_baseline_soil.txt"
 
-    # Calibrate with zero precipitation
     print(f"Calibrating VIC with {args.forcing} forcings + {SUFFIX}...")
     with open(outfile, "w") as fout:
         for bid in tqdm(bids):
@@ -33,7 +32,6 @@ def main():
             )
             fout.write(line)
 
-    # Evaluate training period
     print(f"\nEvaluating {args.forcing} + {SUFFIX} (training period)...")
     mod, obs = vic.evaluate(
         bids, outfile, args.forcing, startdate, enddate,
@@ -44,7 +42,6 @@ def main():
     mod.to_csv(f"{output_dir}/vic_{args.forcing}_{SUFFIX}_train_predictions.csv")
     obs.to_csv(f"{output_dir}/vic_{args.forcing}_{SUFFIX}_train_observations.csv")
 
-    # Evaluate validation period
     val_tstart = "2000-10-01"
     val_tend = "2008-09-30"
     print(f"Evaluating {args.forcing} + {SUFFIX} (validation period)...")

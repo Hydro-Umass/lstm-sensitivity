@@ -52,7 +52,6 @@ for model, prefix_base in [("LSTM", f"ealstm_{FORCING}"),
     obs = pd.read_csv(OUTPUT_DIR / f"{prefix_base}_valid_observations.csv.gz",
                       index_col=0, parse_dates=True)
 
-    # Baseline
     sim = load(prefix_base, obs.columns)
     r, a, b, k = kge_components(obs, sim)
     row = {"Model": model, "Condition": "baseline", "σ": "—", **summarise(r, a, b, k, fhv(obs, sim))}

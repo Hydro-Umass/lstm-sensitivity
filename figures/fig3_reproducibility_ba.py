@@ -55,7 +55,7 @@ def reproducible_hydrologic_signal():
         df.loc[df['diff'] < np.percentile(df['diff'], 1), 'diff'] = np.nan
         df = df.dropna()
         return df
-    # Empirical 95% interval and mean diff on the unclipped data — the
+    # empirical 95% interval and mean diff on the unclipped data — the
     # load-bearing numbers for §3.2. Computed before remove_outliers so the
     # bounds reflect the true daily distribution, not the 1/99 visualization clip.
     pre_lstm = pd.merge(obs, lstm, on=["date", "gauge"]).dropna()
@@ -73,7 +73,7 @@ def reproducible_hydrologic_signal():
     fig, ax = plt.subplots(1, 2, figsize=(20, 8), sharex=True, sharey=True,
                            constrained_layout=True)
 
-    # Shared bin edges across both panels so the colormap is comparable.
+    # shared bin edges across both panels so the colormap is comparable.
     bins = 150
     x_min = max(min(df_lstm.value.min(), df_vic.value.min()), 1e-4)
     x_max = max(df_lstm.value.max(), df_vic.value.max())
