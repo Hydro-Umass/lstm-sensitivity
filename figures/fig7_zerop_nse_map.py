@@ -68,7 +68,7 @@ def zerop_nse_map():
         transform=ccrs.PlateCarree(),
         zorder=5,
     )
-    cb = fig.colorbar(sc, ax=ax, shrink=0.75, pad=0.02, aspect=30)
+    cb = fig.colorbar(sc, ax=ax, shrink=0.75, pad=0.02, aspect=30, extend='min')
     cb.set_label("NSE")
 
     fig.savefig("documents/paper/figures/fig7_zerop_nse_map.png", dpi=300, bbox_inches="tight", pad_inches=0.1)
