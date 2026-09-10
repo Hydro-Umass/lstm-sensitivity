@@ -17,8 +17,8 @@ def main():
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    model_path = output_dir / f"ealstm_{args.forcing}.eqx"
-    config_path = output_dir / f"ealstm_{args.forcing}.toml"
+    model_path = output_dir / f"ealstm_{args.forcing}_{args.seed}.eqx"
+    config_path = output_dir / f"ealstm_{args.forcing}_{args.seed}.toml"
 
     run_config = config.build(args, h5path, model_path, config_path)
 
@@ -44,10 +44,10 @@ def main():
     print(f"Config saved to : {config_path}")
 
     mod, obs = evaluate(model, args.forcing, datadir=args.data_dir)
-    mod.to_csv(f"{output_dir}/ealstm_{args.forcing}_train_predictions.csv")
+    mod.to_csv(f"{output_dir}/ealstm_{args.forcing}_{args.seed}_train_predictions.csv")
     obs.to_csv(f"{output_dir}/ealstm_{args.forcing}_train_observations.csv")
     mod, obs = evaluate(model, args.forcing, val_tstart, val_tend, datadir=args.data_dir)
-    mod.to_csv(f"{output_dir}/ealstm_{args.forcing}_valid_predictions.csv")
+    mod.to_csv(f"{output_dir}/ealstm_{args.forcing}_{args.seed}_valid_predictions.csv")
     obs.to_csv(f"{output_dir}/ealstm_{args.forcing}_valid_observations.csv")
 
 if __name__ == "__main__":
