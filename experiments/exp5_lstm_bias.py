@@ -75,7 +75,7 @@ def main():
             model, forcing, datadir=args.data_dir,
             perturbation=perturbation, xmean=xmean, xstd=xstd
         )
-        mod.to_csv(f"{output_dir}/ealstm_{forcing}_{args.seed}_{suffix}_train_predictions.csv")
+        mod.to_csv(f"{output_dir}/ealstm_{forcing}_{suffix}_{args.seed}_train_predictions.csv")
         obs.to_csv(f"{output_dir}/ealstm_{forcing}_{suffix}_train_observations.csv")
 
         print(f"Evaluating with '{forcing}' forcings + {suffix} (validation period)...")
@@ -83,7 +83,7 @@ def main():
             model, forcing, val_tstart, val_tend, datadir=args.data_dir,
             perturbation=perturbation, xmean=xmean, xstd=xstd
         )
-        mod.to_csv(f"{output_dir}/ealstm_{forcing}_{args.seed}_{suffix}_valid_predictions.csv")
+        mod.to_csv(f"{output_dir}/ealstm_{forcing}_{suffix}_{args.seed}_valid_predictions.csv")
         obs.to_csv(f"{output_dir}/ealstm_{forcing}_{suffix}_valid_observations.csv")
 
 

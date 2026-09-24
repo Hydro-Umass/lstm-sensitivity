@@ -40,8 +40,6 @@ def read_ensemble_files(output_dir, forcing, seeds=None, variant="",
             raise FileNotFoundError(f"No seeded files matching {prefix}_*{suffix}")
 
     obs_path = output_dir / f"{prefix}_{period}_observations.csv"
-    if not obs_path.exists():
-        obs_path = output_dir / f"{model}_{forcing}_{period}_observations.csv"
     obs = pd.read_csv(obs_path, index_col=0, parse_dates=True).sort_index()
 
     pred_frames, used_seeds = [], []
@@ -57,7 +55,7 @@ def read_ensemble_files(output_dir, forcing, seeds=None, variant="",
         if skip_bad: 
             n_nan = int(df.isna().to_numpy().sum())
             if n_nan:
-                print(f"  {prefix} seed {seed}: {n_nan} NaN predictions - EXCLUDED")
+                print(f"  {prefix} seed {seed}: {n_nan} NaN predictions - excluded")
                 continue
 
         df = df.loc[:, [c for c in obs.columns if c in df.columns]]
