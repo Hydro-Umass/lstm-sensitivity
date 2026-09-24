@@ -70,12 +70,12 @@ def main():
 
         print(f"\nEvaluating with '{eval_forcing}' forcings (training period)...")
         mod, obs = evaluate(model, eval_forcing, datadir=args.data_dir, xmean=train_xmean, xstd=train_xstd)
-        mod.to_csv(f"{output_dir}/ealstm_train{train_forcing}_{args.seed}_eval{eval_forcing}_train_predictions.csv")
+        mod.to_csv(f"{output_dir}/ealstm_train{train_forcing}_eval{eval_forcing}_{args.seed}_train_predictions.csv")
         obs.to_csv(f"{output_dir}/ealstm_train{train_forcing}_eval{eval_forcing}_train_observations.csv")
 
         print(f"Evaluating with '{eval_forcing}' forcings (validation period)...")
         mod, obs = evaluate(model, eval_forcing, val_tstart, val_tend, datadir=args.data_dir, xmean=train_xmean, xstd=train_xstd)
-        mod.to_csv(f"{output_dir}/ealstm_train{train_forcing}_{args.seed}_eval{eval_forcing}_valid_predictions.csv")
+        mod.to_csv(f"{output_dir}/ealstm_train{train_forcing}_eval{eval_forcing}_{args.seed}_valid_predictions.csv")
         obs.to_csv(f"{output_dir}/ealstm_train{train_forcing}_eval{eval_forcing}_valid_observations.csv")
 
 
