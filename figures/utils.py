@@ -33,7 +33,7 @@ def read_ensemble_files(output_dir, forcing, seeds=None, variant="",
         found = []
         for p in output_dir.glob(f"{prefix}_*{suffix}"):
             tail = p.name[len(prefix) + 1:-len(suffix)]
-            if tail.isdigit():                    # rejects unseeded / other variants
+            if tail.isdigit():                    
                 found.append(int(tail))
         seeds = sorted(found)
         if not seeds:
