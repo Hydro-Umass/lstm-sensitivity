@@ -17,3 +17,22 @@ def read_met(metfile):
     m["Gauge"] = metfile.split("/")[-1].split("_")[0]
     m = m.set_index("Date")
     return m
+    
+def ensemble_mean(pred_frames, seeds=None):
+    """
+    Average predictions across seeds.
+    """
+    if not pred_frames:
+        raise ValueError("no prediction frames given")
+    if seeds is None:
+        seeds = list(range(len(pred_frames)))
+
+    ref = pred_frames[0]
+    for seed, df in zip(seeds[1:], pred_frames[1:]):
+        if not df.index.equals(ref.index):
+            raise ValueError(f"seed {seed}: time index differs from seed {seeds[0]}")
+        if list(df.columns) != list(ref.columns):
+            raise ValueError(f"seed {seed}: basin columns differ from seed {seeds[0]}")
+
+    stack = np.stack([df.to_numpy(dtype=float) for df in pred_frames])
+    return pd.DataFrame(stack.mean(axis=0), index=ref.index, columns=ref.columns)
