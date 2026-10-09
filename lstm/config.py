@@ -96,7 +96,10 @@ def parse_args_lstm():
         nargs="+",
         default=None,
         metavar="B",
-        help="One or more precipitation bias multipliers to sweep over.",
+        help="One or more precipitation biases to sweep over, given as "
+             "fractional changes rather than multipliers: the perturbation "
+             "applied is P * (1 + bias), so -0.5 means P*0.5 (-50%%) and 0.5 "
+             "means P*1.5 (+50%%).",
     )
 
     parser.add_argument(
@@ -149,7 +152,10 @@ def parse_args_vic():
         nargs="+",
         default=None,
         metavar="B",
-        help="One or more precipitation bias multipliers to sweep over.",
+        help="One or more precipitation biases to sweep over, given as "
+             "fractional changes rather than multipliers: the perturbation "
+             "applied is P * (1 + bias), so -0.5 means P*0.5 (-50%%) and 0.5 "
+             "means P*1.5 (+50%%).",
     )
     parser.add_argument(
         "--stddev",

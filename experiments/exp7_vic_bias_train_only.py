@@ -18,8 +18,12 @@ DIMS = (0,)
 
 
 def get_biases(args):
+    # Values are fractional changes, not multipliers: the perturbation applied
+    # is P * (1 + bias), so -0.5 is P*0.5 (-50%) and 0.5 is P*1.5 (+50%).
+    # Must match the values used for exp5_vic_bias.py, whose soil files this
+    # script loads by filename suffix.
     if args.bias is None:
-        return [0.5, 1.5]
+        return [-0.5, 0.5]
     return args.bias
 
 
