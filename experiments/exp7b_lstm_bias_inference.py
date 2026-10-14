@@ -24,7 +24,7 @@ def load_model(model_path, h5path, args):
     if not model_path.exists():
         raise FileNotFoundError(
             f"Model file not found: {model_path}. "
-            f"Train the baseline model with {forcing}."
+            f"Train the baseline model with {args.forcing}."
         )
     else:
         with h5py.File(str(h5path), "r") as f:
@@ -53,8 +53,8 @@ def main():
 
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
-    model_path = output_dir / f"ealstm_{forcing}.eqx"
-    config_path = output_dir / f"ealstm_{forcing}.toml"
+    model_path = output_dir / f"ealstm_{forcing}_{args.seed}.eqx"
+    config_path = output_dir / f"ealstm_{forcing}_{args.seed}.toml"
 
     model, train_xmean, train_xstd = load_model(model_path, h5path, args)
 
@@ -76,12 +76,12 @@ def main():
 
         print(f"\nEvaluating with '{forcing}' forcings (training period)...")
         mod, obs = evaluate(model, forcing, datadir=args.data_dir, xmean=train_xmean, xstd=train_xstd, perturbation=perturbation)
-        mod.to_csv(f"{output_dir}/ealstm_{forcing}_{suffix}_train_predictions.csv")
+        mod.to_csv(f"{output_dir}/ealstm_{forcing}_{suffix}_{args.seed}_train_predictions.csv")
         obs.to_csv(f"{output_dir}/ealstm_{forcing}_{suffix}_train_observations.csv")
 
         print(f"Evaluating with '{forcing}' forcings (validation period)...")
         mod, obs = evaluate(model, forcing, val_tstart, val_tend, datadir=args.data_dir, xmean=train_xmean, xstd=train_xstd, perturbation=perturbation)
-        mod.to_csv(f"{output_dir}/ealstm_{forcing}_{suffix}_valid_predictions.csv")
+        mod.to_csv(f"{output_dir}/ealstm_{forcing}_{suffix}_{args.seed}_valid_predictions.csv")
         obs.to_csv(f"{output_dir}/ealstm_{forcing}_{suffix}_valid_observations.csv")
 
 

@@ -13,7 +13,7 @@ def load_model(model_path, h5path, args):
     if not model_path.exists():
         raise FileNotFoundError(
             f"Model file not found: {model_path}. "
-            f"Train the baseline model with {train_forcing}."
+            f"Train the baseline model with {args.forcing}."
         )
     else:
         with h5py.File(str(h5path), "r") as f:
