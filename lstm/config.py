@@ -16,6 +16,23 @@ STATIC_VARS = [
     "sand_frac",
     "silt_frac",
     "clay_frac",
+    "p_seasonality",
+    "high_prec_freq",
+    "high_prec_dur",
+    "low_prec_freq",
+    "low_prec_dur",
+    "frac_forest",
+    "lai_max",
+    "lai_diff",
+    "gvf_max",
+    "gvf_diff",
+    "soil_depth_pelletier",
+    "soil_depth_statsgo",
+    "soil_porosity",
+    "soil_conductivity",
+    "max_water_content",
+    "carbonate_rocks_frac",
+    "geol_permeability",
 ]
 
 def parse_args_lstm():
