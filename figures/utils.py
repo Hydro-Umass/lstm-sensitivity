@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+from pathlib import Path
 
 def nse(o, m):
     return 1 - ((o -m)**2).sum(axis=0) / ((o - o.mean())**2).sum(axis=0)

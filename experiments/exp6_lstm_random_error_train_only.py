@@ -56,7 +56,7 @@ def main():
         train_suffix = f"random_error_std{stddev}"
         eval_suffix = f"random_error_std{stddev}_noperturb"
 
-        model_path = output_dir / f"ealstm_{forcing}_{train_suffix}.eqx"
+        model_path = output_dir / f"ealstm_{forcing}_{args.seed}_{train_suffix}.eqx"
         model = load_model(model_path, h5path, args)
 
         # evaluate on baseline (no perturbation); xmean/xstd read from H5 file,
@@ -64,13 +64,13 @@ def main():
         print(f"\nEvaluating '{forcing}' baseline forcings with model "
               f"trained on {train_suffix} (training period)...")
         mod, obs = evaluate(model, forcing, datadir=args.data_dir)
-        mod.to_csv(f"{output_dir}/ealstm_{forcing}_{eval_suffix}_train_predictions.csv")
+        mod.to_csv(f"{output_dir}/ealstm_{forcing}_{eval_suffix}_{args.seed}_train_predictions.csv")
         obs.to_csv(f"{output_dir}/ealstm_{forcing}_{eval_suffix}_train_observations.csv")
 
         print(f"Evaluating '{forcing}' baseline forcings with model "
               f"trained on {train_suffix} (validation period)...")
         mod, obs = evaluate(model, forcing, val_tstart, val_tend, datadir=args.data_dir)
-        mod.to_csv(f"{output_dir}/ealstm_{forcing}_{eval_suffix}_valid_predictions.csv")
+        mod.to_csv(f"{output_dir}/ealstm_{forcing}_{eval_suffix}_{args.seed}_valid_predictions.csv")
         obs.to_csv(f"{output_dir}/ealstm_{forcing}_{eval_suffix}_valid_observations.csv")
 
 
