@@ -83,7 +83,7 @@ def parse_args_lstm():
     parser.add_argument(
         "--batch-size",
         type=int,
-        default=512,
+        default=256,
         help="Mini-batch size.",
     )
     parser.add_argument(
