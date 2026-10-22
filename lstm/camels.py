@@ -273,7 +273,7 @@ def write_data(xt, xst, yt, sb, seq_len, h5path, chunksize=512):
 def generate_h5file(forcing, tstart, tend, seq_len, acols, datadir):
     bids = pd.read_csv(f"{datadir}/bids.csv", header=None, dtype=str).iloc[:, 0].values
     attribs = read_static_attributes(acols, datadir)
-    xt, xst, yt, bids = get_data(bids, forcing, tstart, tend, seq_len, attribs)
+    xt, xst, yt, bids = get_data(bids, forcing, tstart, tend, seq_len, attribs, datadir)
     sb = np.array([y.std() for y in yt])
     h5path = f"{datadir}/{forcing}.h5"
     write_data(xt, xst, yt, sb, seq_len, h5path)
