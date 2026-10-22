@@ -1,4 +1,5 @@
 import os
+import random
 import pandas as pd
 import numpy as np
 import subprocess
@@ -215,6 +216,7 @@ def evaluate(bids, soilfile, forcing, startdate, enddate, datadir="data", vic_ex
             / (model.area * 1e6)
         )
         q = model.run()
+        shutil.rmtree(model.forcingpath)
         mod[bid] = q
         obs[bid] = qobs
     return pd.DataFrame(mod), pd.DataFrame(obs)
@@ -247,8 +249,19 @@ def calibrate(
     vic_exec="vicNl",
     perturbation=None,
     seed=None,
+    max_evaluations=5000,
+    opt_seed=None,
+    callback=None,
 ):
-    """Calibrate VIC model using NSGA-II optimization."""
+    """Calibrate VIC model using NSGA-II optimization.
+
+    `max_evaluations` caps the number of VIC runs (Platypus counts function
+    evaluations, not generations). `opt_seed` seeds the optimizer, separately
+    from `seed`, which seeds the forcing perturbation. `callback` is passed to
+    `NSGAII.run` and called with the algorithm after every generation.
+    """
+    if opt_seed is not None:
+        random.seed(opt_seed)
     if nprocs is None:
         slurm_cpus = os.environ.get("SLURM_CPUS_PER_TASK")
         if slurm_cpus is not None:
@@ -283,7 +296,7 @@ def calibrate(
 
     with ProcessPoolEvaluator(nprocs) as evaluator:
         algorithm = NSGAII(problem, evaluator=evaluator)
-        algorithm.run(1000)
+        algorithm.run(max_evaluations, callback=callback)
 
     # delete temporary forcing directory
     shutil.rmtree(model.forcingpath)
