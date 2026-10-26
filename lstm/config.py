@@ -164,6 +164,14 @@ def parse_args_vic():
         help="Random seed for reproducibility.",
     )
     parser.add_argument(
+        "--opt-seed",
+        type=int,
+        default=1,
+        help="Base seed for the NSGA-II optimizer; each basin is calibrated "
+             "with opt_seed + int(gauge_id), so calibrations are reproducible "
+             "regardless of basin order or how the basins are split across jobs.",
+    )
+    parser.add_argument(
         "--bias",
         type=float,
         nargs="+",

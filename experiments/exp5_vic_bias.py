@@ -51,6 +51,7 @@ def main():
                     datadir=args.data_dir,
                     vic_exec=args.vic_exec,
                     perturbation=perturbation,
+                    opt_seed=args.opt_seed + int(bid),
                 )
                 fout.write(line)
 

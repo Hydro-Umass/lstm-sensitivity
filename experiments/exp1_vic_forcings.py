@@ -16,7 +16,8 @@ def main():
     outfile = f"{output_dir}/vic_{args.forcing}_baseline_soil.txt"
     with open(outfile, "w") as fout:
         for bid in tqdm(bids):
-            line = vic.calibrate(bid, soilfile, args.forcing, startdate, enddate, datadir=args.data_dir, vic_exec=args.vic_exec)
+            line = vic.calibrate(bid, soilfile, args.forcing, startdate, enddate, datadir=args.data_dir, vic_exec=args.vic_exec,
+                                 opt_seed=args.opt_seed + int(bid))
             fout.write(line)
     print("Evaluating calibration period")
     mod, obs = vic.evaluate(bids, outfile, args.forcing, startdate, enddate, datadir=args.data_dir, vic_exec=args.vic_exec)
