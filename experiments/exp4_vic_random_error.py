@@ -37,7 +37,7 @@ def main():
 
     for stddev in stddevs:
         suffix = f"random_error_std{stddev}"
-        perturbation = perturb.RandomPerturbation(stddev=stddev, dims=(0,))
+        perturbation = perturb.RandomPerturbation(stddev=stddev, dims=(0,), seed=args.seed)
         print(f"\n{'='*60}")
         print(f"Calibrating VIC with {forcing} forcings + {suffix}...")
         print(f"{'='*60}")
@@ -50,7 +50,7 @@ def main():
                     datadir=args.data_dir,
                     vic_exec=args.vic_exec,
                     perturbation=perturbation,
-                    seed=args.seed
+                    opt_seed=args.opt_seed + int(bid),
                 )
                 fout.write(line)
 
@@ -60,7 +60,6 @@ def main():
             datadir=args.data_dir,
             vic_exec=args.vic_exec,
             perturbation=perturbation,
-            seed=args.seed
         )
         mod.to_csv(f"{output_dir}/vic_{forcing}_{suffix}_train_predictions.csv")
         obs.to_csv(f"{output_dir}/vic_{forcing}_{suffix}_train_observations.csv")
@@ -73,7 +72,6 @@ def main():
             datadir=args.data_dir,
             vic_exec=args.vic_exec,
             perturbation=perturbation,
-            seed=args.seed
         )
         mod.to_csv(f"{output_dir}/vic_{forcing}_{suffix}_valid_predictions.csv")
         obs.to_csv(f"{output_dir}/vic_{forcing}_{suffix}_valid_observations.csv")

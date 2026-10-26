@@ -37,7 +37,7 @@ def main():
 
     for stddev in stddevs:
         suffix = f"infer_random_error_std{stddev}"
-        perturbation = perturb.RandomPerturbation(stddev=stddev, dims=(0,))
+        perturbation = perturb.RandomPerturbation(stddev=stddev, dims=(0,), seed=args.seed)
 
         outfile = f"{output_dir}/vic_{forcing}_baseline_soil.txt"
 
@@ -47,7 +47,6 @@ def main():
             datadir=args.data_dir,
             vic_exec=args.vic_exec,
             perturbation=perturbation,
-            seed=args.seed
         )
         mod.to_csv(f"{output_dir}/vic_{forcing}_{suffix}_train_predictions.csv")
         obs.to_csv(f"{output_dir}/vic_{forcing}_{suffix}_train_observations.csv")
@@ -60,7 +59,6 @@ def main():
             datadir=args.data_dir,
             vic_exec=args.vic_exec,
             perturbation=perturbation,
-            seed=args.seed
         )
         mod.to_csv(f"{output_dir}/vic_{forcing}_{suffix}_valid_predictions.csv")
         obs.to_csv(f"{output_dir}/vic_{forcing}_{suffix}_valid_observations.csv")
