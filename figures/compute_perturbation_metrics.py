@@ -1,176 +1,81 @@
-"""Compute per-basin median statistics for perturbation experiments.
+"""Compute seed-aggregated per-basin median statistics for perturbation experiments.
 
 Outputs two LaTeX tables:
   Table S2 — random error (NSE, KGE, r, α, β, FHV) for LSTM and VIC
   Table S3 — systematic bias (NSE, KGE, r, α, β, FHV, FLV, rMAE) for LSTM and VIC
 
+Each LSTM value is the across-seed median of the per-seed, per-basin median
+(utils.aggregate_seeds); metrics are never computed on the ensemble-mean
+hydrograph. VIC runs are single members. The across-seed spread of every
+entry is written to a CSV next to the tables (--spread-csv), which supports
+the blanket bound quoted in the text.
+
+Usage: python figures/compute_perturbation_metrics.py --output-dir outputs [--forcing daymet]
 """
 
+import argparse
 import pandas as pd
 import numpy as np
-from pathlib import Path
 
-OUTPUT_DIR = Path("outputs")
-FORCING = "daymet"
-
-
-def load_pred(prefix, obs_cols):
-    for ext in ["", ".gz"]:
-        p = OUTPUT_DIR / f"{prefix}_valid_predictions.csv{ext}"
-        if p.exists():
-            df = pd.read_csv(p, index_col=0, parse_dates=True)
-            common = obs_cols.intersection(df.columns)
-            return df.loc[:, common]
-    raise FileNotFoundError(f"No predictions found for {prefix}")
-
-
-def per_basin_nse(obs, sim):
-    results = {}
-    for basin in obs.columns:
-        o = obs[basin].dropna()
-        s = sim[basin].reindex(o.index).dropna()
-        idx = o.index.intersection(s.index)
-        if not len(idx):
-            continue
-        o, s = o.loc[idx], s.loc[idx]
-        denom = ((o - o.mean()) ** 2).sum()
-        if denom > 1e-6:
-            results[basin] = 1 - ((o - s) ** 2).sum() / denom
-    return pd.Series(results)
-
-
-def kge_components(obs, sim):
-    r = obs.corrwith(sim)
-    alpha = sim.std() / obs.std()
-    beta = sim.mean() / obs.mean()
-    kge = 1 - np.sqrt((r - 1) ** 2 + (alpha - 1) ** 2 + (beta - 1) ** 2)
-    return r, alpha, beta, kge
-
-
-def flow_volume_error(obs, sim, pct, side):
-    results = {}
-    for basin in obs.columns:
-        o = obs[basin].dropna()
-        s = sim[basin].reindex(o.index)
-        thresh = o.quantile(pct)
-        mask = (o >= thresh) if side == "high" else (o <= thresh)
-        vol_obs = o[mask].sum()
-        vol_sim = s[mask].sum()
-        if abs(vol_obs) > 1e-6:
-            results[basin] = (vol_sim - vol_obs) / vol_obs * 100
-    return pd.Series(results)
-
-
-def rel_mae(obs, sim):
-    results = {}
-    for basin in obs.columns:
-        o = obs[basin].dropna()
-        s = sim[basin].reindex(o.index).dropna()
-        idx = o.index.intersection(s.index)
-        if not len(idx):
-            continue
-        denom = o.loc[idx].mean()
-        if abs(denom) > 1e-6:
-            results[basin] = (s.loc[idx] - o.loc[idx]).abs().mean() / denom * 100
-    return pd.Series(results)
-
-
-def align(obs, sim):
-    common = obs.columns.intersection(sim.columns)
-    return obs[common], sim[common]
-
-
-def stats_random(obs, sim):
-    obs, sim = align(obs, sim)
-    nse_vals = per_basin_nse(obs, sim)
-    r, a, b, k = kge_components(obs, sim)
-    fhv = flow_volume_error(obs, sim, 0.98, "high")
-    return dict(
-        NSE=nse_vals.median(),
-        KGE=k.median(),
-        r=r.median(),
-        alpha=a.median(),
-        beta=b.median(),
-        FHV=fhv.median(),
-    )
-
-
-def stats_bias(obs, sim):
-    obs, sim = align(obs, sim)
-    d = stats_random(obs, sim)
-    d["FLV"] = flow_volume_error(obs, sim, 0.30, "low").median()
-    d["rMAE"] = rel_mae(obs, sim).median()
-    return d
-
+from utils import ensemble_summary, METRICS
 
 STD_LEVELS = [0.1, 0.25, 0.5]
+BIAS_LEVELS = [-0.5, -0.25, -0.1, 0.1, 0.25, 0.5]
+MODELS = [("LSTM", "ealstm"), ("VIC", "vic")]
 
-rand_rows = []
-for model, prefix_base in [("LSTM", f"ealstm_{FORCING}"), ("VIC", f"vic_{FORCING}")]:
-    obs = pd.read_csv(
-        OUTPUT_DIR / f"{prefix_base}_valid_observations.csv.gz",
-        index_col=0, parse_dates=True,
-    )
-    rand_rows.append(
-        dict(Model=model, Condition="Baseline", sigma="---",
-             **stats_random(obs, load_pred(prefix_base, obs.columns)))
-    )
+
+def summarize(output_dir, forcing, model, variant):
+    """Seed-aggregated value and spread for every metric, or None if the run is missing."""
+    try:
+        agg, _ = ensemble_summary(output_dir, forcing, variant=variant, model=model)
+    except (FileNotFoundError, ValueError):
+        return None
+    return agg
+
+
+def collect(output_dir, forcing, conditions, level_name):
+    """
+    conditions: list of (level_label, [(condition_label, variant), ...]).
+    Returns (table rows with values, long DataFrame of spreads).
+    """
+    rows, spreads = [], []
+    for model_label, model in MODELS:
+        for level, conds in conditions:
+            for cond_label, variant in conds:
+                agg = summarize(output_dir, forcing, model, variant)
+                vals = {m: (None if agg is None else agg.loc[m, "value"]) for m in METRICS}
+                rows.append(dict(Model=model_label, Condition=cond_label, **{level_name: level}, **vals))
+                if agg is not None:
+                    spreads.append(agg.assign(Model=model_label, Condition=cond_label,
+                                              level=level, variant=variant or "baseline"))
+                else:
+                    print(f"  missing: {model}_{forcing}_{variant}")
+    spreads = pd.concat(spreads).rename_axis("metric").reset_index() if spreads else pd.DataFrame()
+    return pd.DataFrame(rows), spreads
+
+
+def random_conditions():
+    conds = [("---", [("Baseline", "")])]
     for std in STD_LEVELS:
         lvl = f"{std:g}"
-        for cond_label, stem in [
+        conds.append((f"{int(std*100)}\\%", [
             ("Train \\& eval", f"random_error_std{lvl}"),
             ("Train only",     f"random_error_std{lvl}_noperturb"),
             ("Infer only",     f"infer_random_error_std{lvl}"),
-        ]:
-            try:
-                sim = load_pred(f"{prefix_base}_{stem}", obs.columns)
-                rand_rows.append(
-                    dict(Model=model, Condition=cond_label,
-                         sigma=f"{int(std*100)}\\%", **stats_random(obs, sim))
-                )
-            except FileNotFoundError:
-                rand_rows.append(
-                    dict(Model=model, Condition=cond_label,
-                         sigma=f"{int(std*100)}\\%",
-                         NSE=None, KGE=None, r=None, alpha=None, beta=None, FHV=None)
-                )
+        ]))
+    return conds
 
-rand_df = pd.DataFrame(rand_rows)
 
-BIAS_LEVELS = [-0.5, -0.25, -0.1, 0.1, 0.25, 0.5]
-
-bias_rows = []
-for model, prefix_base in [("LSTM", f"ealstm_{FORCING}"), ("VIC", f"vic_{FORCING}")]:
-    obs = pd.read_csv(
-        OUTPUT_DIR / f"{prefix_base}_valid_observations.csv.gz",
-        index_col=0, parse_dates=True,
-    )
-    bias_rows.append(
-        dict(Model=model, Condition="Baseline", bias="---",
-             **stats_bias(obs, load_pred(prefix_base, obs.columns)))
-    )
+def bias_conditions():
+    conds = [("---", [("Baseline", "")])]
     for b in BIAS_LEVELS:
-        sign = f"{int(b*100):+d}\\%"
-        for cond_label, stem in [
+        conds.append((f"{int(b*100):+d}\\%", [
             ("Train \\& eval", f"bias{b:g}"),
             ("Train only",     f"bias{b:g}_noperturb"),
             ("Infer only",     f"infer_bias{b:g}"),
-        ]:
-            try:
-                sim = load_pred(f"{prefix_base}_{stem}", obs.columns)
-                bias_rows.append(
-                    dict(Model=model, Condition=cond_label,
-                         bias=sign, **stats_bias(obs, sim))
-                )
-            except FileNotFoundError:
-                bias_rows.append(
-                    dict(Model=model, Condition=cond_label,
-                         bias=sign,
-                         NSE=None, KGE=None, r=None, alpha=None,
-                         beta=None, FHV=None, FLV=None, rMAE=None)
-                )
+        ]))
+    return conds
 
-bias_df = pd.DataFrame(bias_rows)
 
 def fmt(v, decimals=2, signed=False):
     if v is None or (isinstance(v, float) and np.isnan(v)):
@@ -304,6 +209,26 @@ def print_table_s3(df):
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
+    parser.add_argument("--output-dir", default="outputs")
+    parser.add_argument("--forcing", default="daymet")
+    parser.add_argument("--spread-csv", default="perturbation_seed_spread.csv")
+    args = parser.parse_args()
+
+    rand_df, rand_spread = collect(args.output_dir, args.forcing, random_conditions(), "sigma")
+    bias_df, bias_spread = collect(args.output_dir, args.forcing, bias_conditions(), "bias")
+
     print(print_table_s2(rand_df))
     print()
     print(print_table_s3(bias_df))
+
+    spread = pd.concat([rand_spread.assign(experiment="random"),
+                        bias_spread.assign(experiment="bias")], ignore_index=True)
+    spread.to_csv(args.spread_csv, index=False)
+    lstm = spread[(spread.Model == "LSTM") & (spread.n_seeds > 1)]
+    if len(lstm):
+        print()
+        print(f"% LSTM across-seed spread written to {args.spread_csv}")
+        print(f"% n_seeds per configuration: {sorted(lstm.n_seeds.unique())}")
+        print("% largest across-seed spread of the per-basin median, any configuration:")
+        print("% " + ", ".join(f"{m}={lstm.loc[lstm.metric == m, 'spread'].max():.3g}" for m in METRICS))
