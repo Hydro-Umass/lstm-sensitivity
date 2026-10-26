@@ -57,14 +57,16 @@ def evaluate(model, forcing, tstart=None, tend=None, bids=None, datadir="data", 
     attribs = camels.read_static_attributes(config.STATIC_VARS, datadir)
     xt, xst, yt, bids = camels.get_data(bids, forcing, tstart, tend, seq_len, attribs, datadir)
     dt = pd.date_range(tstart, tend)
+    # dates of the input series, including the spin-up before the first prediction
+    dt_in = pd.date_range(pd.to_datetime(tstart) - pd.DateOffset(days=seq_len-1), tend)
     mod = {}
     obs = {}
     for bi, bid in enumerate(tqdm(bids, desc="Evaluating")):
-        xt_ = np.stack([xt[bi][t:t+seq_len, :] for t in range(xt[bi].shape[0]-seq_len+1)])
-        xst_ = np.stack([xst[bi] for _ in range(xt[bi].shape[0]-seq_len+1)])
+        # perturb the series once, so every window sees the same noisy history
+        x_b = xt[bi] if perturbation is None else perturbation.apply_series(xt[bi], bid, dt_in)
+        xt_ = np.stack([x_b[t:t+seq_len, :] for t in range(x_b.shape[0]-seq_len+1)])
+        xst_ = np.stack([xst[bi] for _ in range(x_b.shape[0]-seq_len+1)])
         xt_ = jnp.asarray(xt_)
-        if perturbation is not None:
-            xt_, _ = perturbation(xt_)
         xt_ = (xt_ - xmean) / xstd
         inf_model = eqx.nn.inference_mode(model)
         pred = jax.vmap(inf_model)(xt_, xst_, key=jrn.split(jrn.PRNGKey(0), xt_.shape[0]))
