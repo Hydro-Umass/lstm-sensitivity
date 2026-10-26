@@ -283,6 +283,52 @@ def generate_h5file(forcing, tstart, tend, seq_len, acols, datadir):
         f.attrs["tstart"] = tstart
         f.attrs["tend"] = tend
 
+def _batch_perturber(h5path, perturbation, pert_key=None):
+    """
+    Returns a function (x_batch, batch_idx) -> perturbed jax array.
+
+    Perturbations indexed by basin and date (RandomPerturbation) are looked up
+    from one series per basin, so overlapping windows and repeated epochs all
+    see the same noisy history. Samples in the HDF5 file are written basin by
+    basin, `ndays` windows each, so sample i is basin i // ndays and its window
+    starts at day i % ndays of the input series.
+    """
+    if perturbation is None:
+        return lambda x, idx: jnp.asarray(x)
+    if not hasattr(perturbation, "multipliers"):
+        state = {"key": pert_key}
+        def apply(x, idx):
+            x = jnp.asarray(x)
+            if state["key"] is not None:
+                x, state["key"] = perturbation(x, state["key"])
+            else:
+                x, _ = perturbation(x)
+            return x
+        return apply
+    with h5py.File(h5path, "r") as f:
+        n_samples = f["x"].shape[0]
+        seq_len = int(f.attrs["seq_len"])
+        tstart = pd.to_datetime(f.attrs["tstart"])
+        tend = pd.to_datetime(f.attrs["tend"])
+        bids = [b.decode() for b in f["bids"][:]]
+    ndays = (tend - tstart).days + 1
+    if n_samples != ndays * len(bids):
+        raise ValueError(
+            f"{h5path}: {n_samples} samples, expected {len(bids)} basins x {ndays} days"
+        )
+    dates = pd.date_range(tstart - pd.DateOffset(days=seq_len-1), tend)
+    mult = np.stack([perturbation.multipliers(bid, dates) for bid in bids])
+    offsets = np.arange(seq_len)
+    def apply(x, idx):
+        x = np.array(x, dtype=np.float32)
+        b = idx // ndays
+        t = idx % ndays
+        m = mult[b[:, None], t[:, None] + offsets]  # (batch, seq_len, n_dims)
+        for i, dim in enumerate(perturbation.dims):
+            x[:, :, dim] *= m[:, :, i]
+        return jnp.asarray(x)
+    return apply
+
 def dataloader(h5path: str, batch_size:int, key: jrn.PRNGKey, shuffle: bool=True, preload: bool=False, perturbation: Optional['Perturbation']=None, pert_key: Optional[jrn.PRNGKey]=None):
     """
     Creates a data loader for HDF5 dataset.
@@ -310,6 +356,7 @@ def dataloader(h5path: str, batch_size:int, key: jrn.PRNGKey, shuffle: bool=True
     tuple
         Batch of (x, xs, y, s) tensors
     """
+    perturb_batch = _batch_perturber(h5path, perturbation, pert_key)
     if preload:
         print("Loading dataset into memory...")
         with h5py.File(h5path, "r") as f:
@@ -333,12 +380,7 @@ def dataloader(h5path: str, batch_size:int, key: jrn.PRNGKey, shuffle: bool=True
                 rng.shuffle(indices)
             for start in range(0, n_samples - batch_size + 1, batch_size):
                 batch_idx = indices[start : start + batch_size]
-                x_batch = jnp.asarray(x_all[batch_idx])
-                if perturbation is not None:
-                    if pert_key is not None:
-                        x_batch, pert_key = perturbation(x_batch, pert_key)
-                    else:
-                        x_batch, _ = perturbation(x_batch)
+                x_batch = perturb_batch(x_all[batch_idx], batch_idx)
                 x_batch = (x_batch - xmean) / xstd
                 yield (
                     x_batch,
@@ -367,12 +409,7 @@ def dataloader(h5path: str, batch_size:int, key: jrn.PRNGKey, shuffle: bool=True
                     y_np  = f["y"][sorted_idx]
                     s_np  = f["s"][sorted_idx]
                     inv = np.argsort(sorted_pos)
-                    x_batch = jnp.asarray(x_np[inv])
-                    if perturbation is not None:
-                        if pert_key is not None:
-                            x_batch, pert_key = perturbation(x_batch, pert_key)
-                        else:
-                            x_batch, _ = perturbation(x_batch)
+                    x_batch = perturb_batch(x_np[inv], batch_idx)
                     x_batch = (x_batch - xmean) / xstd
                     yield (
                         x_batch,

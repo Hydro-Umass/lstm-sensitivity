@@ -40,7 +40,7 @@ def main():
     val_tend = "2008-09-30"
 
     for stddev in stddevs:
-        perturbation = RandomPerturbation(stddev=stddev, dims=DIMS)
+        perturbation = RandomPerturbation(stddev=stddev, dims=DIMS, seed=args.seed)
         suffix = f"random_error_std{stddev}"
         print(f"\n{'='*60}")
         print(f"Training with RandomPerturbation stddev={stddev}")

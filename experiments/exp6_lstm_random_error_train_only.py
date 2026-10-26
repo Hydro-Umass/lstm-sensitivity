@@ -52,7 +52,7 @@ def main():
     val_tend = "2008-09-30"
 
     for stddev in stddevs:
-        perturbation = RandomPerturbation(stddev=stddev, dims=DIMS)
+        perturbation = RandomPerturbation(stddev=stddev, dims=DIMS, seed=args.seed)
         train_suffix = f"random_error_std{stddev}"
         eval_suffix = f"random_error_std{stddev}_noperturb"
 

@@ -67,7 +67,7 @@ def main():
         print(f"Config already exists at {config_path}, skipping save.")
 
     for stddev in stddevs:
-        perturbation = RandomPerturbation(stddev=stddev, dims=DIMS)
+        perturbation = RandomPerturbation(stddev=stddev, dims=DIMS, seed=args.seed)
         suffix = f"infer_random_error_std{stddev}"
 
         print(f"\nEvaluating with '{forcing}' forcings (training period)...")
